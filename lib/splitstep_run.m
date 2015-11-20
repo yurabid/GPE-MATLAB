@@ -97,7 +97,7 @@ for j=start+1:niter_outer
     tmp = exp(-(VV - mu  + g*tmp2)*dt/2).*tmp;
     
     % main SMALL cycle starts here
-    for i=1:niter_inner
+    for i=1:niter_inner-1
         tmp = ifftn(ekk.*fftn(tmp));
         if(omega ~= 0)
             lphi = tmp;
@@ -120,7 +120,13 @@ for j=start+1:niter_outer
     end
     
     tmp = exp((VV - mu + g*tmp.*conj(tmp))*dt/2).*tmp;
+    tmp3 = abs(tmp.*conj(tmp));
+    
+    tmp = exp(-(VV - mu  + g*tmp3)*dt/2).*tmp;
+    tmp = ifftn(ekk.*fftn(tmp));
+    tmp = exp(-(VV - mu  + g*tmp.*conj(tmp))*dt/2).*tmp;
     tmp2 = abs(tmp.*conj(tmp));
+    
     NNN = NN0*exp(-time2/tau);
     NNgpu = sum(sum(sum(tmp2)));
     NN(j) = gather(NNgpu)*h*h*hz;
@@ -184,6 +190,10 @@ for j=start+1:niter_outer
         save(sprintf('snapshots/slice_%05d',j),'slice');
         densz = sum(abs(phi).^2,3)*hz;
         save(sprintf('snapshots/densz_%05d',j),'densz');
+        ddensz = gather(sum(tmp2-tmp3,3))*hz;
+        save(sprintf('snapshots/ddensz_%05d',j),'ddensz');
+        densz4 = sum(abs(phi).^4,3)*hz;
+        save(sprintf('snapshots/densz4_%05d',j),'densz4');
         mulocal = gather(sum(mulocalg,3)/NNgpu);
         save(sprintf('snapshots/mulocal_%05d',j),'mulocal');
     end
