@@ -34,12 +34,13 @@ dt_itp = 0.02; % time step for ITP
 % Dynamics parameters
 start = 0;
 ddt = 0.01000613218911873; % time step for dynamics
-niter_inner = 50; %number of internal iterations
-niter_outer = 4000;%331; %number of external iterations
+niter_inner = 100; %number of internal iterations
+niter_outer = 2000;%331; %number of external iterations
 n_cn = 10; % numder of CN iterations for L calculation
 saveSlices = [0 0 1]; % save wave function slices in [(yz) (xz) (xy)] planes
 detectCores = [0 0 0]; % detect cores in [(yz) (xz) (xy)] planes
 useTDPot = 1; % use time-dependent potential (must be provided is a separate TDPot.m)
+usePostProcess = 1; % use post-processing function PostProcess.m after each iteration
 
 % Modification of the GS before the dynamics simulation (imprint vortex etc.)
 % s = 1;

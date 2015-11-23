@@ -145,7 +145,7 @@ for j=start+1:niter_outer
         Y.*(-circshift(phi,[0 2])+8*circshift(phi,[0 1])-8*circshift(phi,[0 -1])+circshift(phi,[0 -2]))))))))*h*hz./(12*NN(j));
     fprintf('j = %d, t = %0.3f, L = %0.6f, E = %0.6f, mu = %0.6f \n', j, time2*tcoef, LL(j), HH(j), MU(j));
     toc
-    
+    tic
     if(doCoreDetect > 0)
         % core detection
         coresp = [0 0 0];
@@ -190,14 +190,17 @@ for j=start+1:niter_outer
         save(sprintf('snapshots/slice_%05d',j),'slice');
         densz = sum(abs(phi).^2,3)*hz;
         save(sprintf('snapshots/densz_%05d',j),'densz');
-        ddensz = gather(sum(tmp2-tmp3,3))*hz;
+        ddensz = gather(sum(tmp2-tmp3,3))*hz/ddt;
         save(sprintf('snapshots/ddensz_%05d',j),'ddensz');
         densz4 = sum(abs(phi).^4,3)*hz;
         save(sprintf('snapshots/densz4_%05d',j),'densz4');
         mulocal = gather(sum(mulocalg,3)/NNgpu);
         save(sprintf('snapshots/mulocal_%05d',j),'mulocal');
     end
+    if (usePostProcess>0)
+        PostProcess(phi);
+    end
     save('phi2','phi');
-
     save('params', 'NN' ,'maxx','HH', 'LL', 'MU', 'MUc', 'angles');
+    toc
 end
