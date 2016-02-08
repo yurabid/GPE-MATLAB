@@ -16,7 +16,7 @@ for i=1:nshift
 end
 dif = ans - circshift(ans,[0 0 1]);
 
-res1 = (sum(dif>pi,3)-sum(dif<-pi,3)).*(phi>1);
+res1 = (sum(dif>pi,3)-sum(dif<-pi,3)).*(phi>0.00001);
 
 %an1 = circshift(an,[1,0]);
 %an2 = circshift(an,[1,1]);

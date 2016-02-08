@@ -1,8 +1,8 @@
 %Calculate the dynamics of GPE with the split-step method
 
 % Initialize basic parameters
-global tcoef XXg YYg addphase;
-addphase = 0;
+global tcoef XXg YYg;
+
 if(exist('L','var') ~= 1)
     disp('reinitializing config parameters');
     config
@@ -87,7 +87,6 @@ else
     MUc = zeros(niter_outer,1);
     NN = zeros(niter_outer,1);    
     LL = zeros(niter_outer,1);
-    angles = zeros(niter_outer,1);
 end
 % main BIG cycle starts here
 for j=start+1:niter_outer
@@ -133,7 +132,7 @@ for j=start+1:niter_outer
     mulocalg = abs(conj(tmp).*ifftn(kk.*fftn(tmp))) + (VV+g*tmp2).*tmp2;
     MU(j) = gather(sum(sum(sum(mulocalg)))/NNgpu);
     HH(j) = MU(j) - gather(sum(sum(sum(g*0.5*tmp2.*tmp2)))/NNgpu);
-    angles(j) = addphase/pi;
+
     %mu_last = mu;
     if(gam>0)
         mu = mu + gpuArray((-log(NN(j)/NNN)/dt_outer)*(1+gam^2)/(2*gam));
@@ -188,6 +187,8 @@ for j=start+1:niter_outer
     if(saveSlices(3) > 0)
         slice(:,:) = phi(:,:,Nz/2);
         save(sprintf('snapshots/slice_%05d',j),'slice');
+%         slicesum = sum(phi,3);
+%         save(sprintf('snapshots/slicesum_%05d',j),'slicesum');
         densz = sum(abs(phi).^2,3)*hz;
         save(sprintf('snapshots/densz_%05d',j),'densz');
         ddensz = gather(sum(tmp2-tmp3,3))*hz/ddt;
@@ -201,6 +202,6 @@ for j=start+1:niter_outer
         PostProcess(phi);
     end
     save('phi2','phi');
-    save('params', 'NN' ,'maxx','HH', 'LL', 'MU', 'MUc', 'angles');
+    save('params', 'NN' ,'maxx','HH', 'LL', 'MU', 'MUc');
     toc
 end

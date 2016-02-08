@@ -8,6 +8,8 @@ h = r(2)-r(1);
 hz = rz(2)-rz(1);
 dt = ddt*tcoef*niter_inner;
 f=figure;
+[XX,YY] = meshgrid(r,r);
+angles3 = atan2(XX,YY);
 
 load(sprintf('snapshots/slice_%05d.mat',0));
 slice0 = slice(:,:);
@@ -18,6 +20,10 @@ maxx = max(max(abs(slice(:,:))));
 for j=1:niter_outer
     load(sprintf('snapshots/slice_%05d.mat',j));
     clf(f,'reset')
+    time = ddt*niter_inner*j;
+%     curangle = (rotangle(time,omegaBar,0.25) + initphase)/pi;
+%     ang1 = angle(sum(sum(slice.*(angles3>(-pi + curangle*pi)).*(angles3<-curangle*pi))));
+%     slice = slice.*exp(-1i*ang1);
 	[coresp, coresm] = detect_core(slice,X,Y);
 % 	[s,v] = velocity_field(slice,r,-(j-1)*dt*1.5*2*pi,slice0);
 %     [s,v] = velocity_field(slice,r,-angles(j)*pi-pi/2,slice0);
