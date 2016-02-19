@@ -1,13 +1,12 @@
 classdef GPEtask < handle
     %GPEtask - Solution of the Gross-Pitaevsii equation
-    %   Detailed explanation goes here
     
     properties
         grid                   % grid object
         g                      % coupling coefficient
         omega = 0.0            % rotation speed
         gamma = 0.0            % dissipation constant
-        decay_rate = 0         % decay rate
+        decay_rate = 0         % 1/e decay time (0 for no decay)
         Ntotal                 % initial total number of particles
         Vtrap                  % matrix of the trap potential
         Vtd                    % function handle to the time-dependent potential
@@ -31,7 +30,7 @@ classdef GPEtask < handle
                 obj.Vtrap = trappot(grid.mesh.x,grid.mesh.y,grid.mesh.z);
             end
             obj.dispstat('','init');
-            obj.history = struct('mu',zeros(1,0,'gpuArray'),'n',zeros(1,0,'gpuArray'));
+            obj.history = struct('mu',zeros(1,0,'like',grid.mesh.x),'n',zeros(1,0,'like',grid.mesh.x));
         end
         
         function v = getVtotal(obj,time)
@@ -45,7 +44,12 @@ classdef GPEtask < handle
         function res = applyham(obj,phi)
             res = obj.grid.ifft(obj.grid.kk.*obj.grid.fft(phi)) + obj.getVtotal(obj.current_time).*phi + obj.g*abs(phi).^2.*phi;
         end
-        
+  end
+  
+  methods (Access = private) 
+      
+      dispstat(obj,TXT,varargin);
+      
         function ext_callback(obj,phi,step,time,mu)
             if(exist('snapshots','file') ~= 7)
                 mkdir('snapshots');

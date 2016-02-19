@@ -1,13 +1,15 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps)
+function [phi, varargout] = groundstate_itp(task,dt,eps,varargin)
 % groundstate_itp - Calculate the stationary state of GPE with Imaginary Time Propagation method.
 %
 %  Usage :
 %    phi = task.groundstate_itp(dt,eps)
+%    phi = task.groundstate_itp(dt,eps,phi0)
 %    [phi, mu] = task.groundstate_itp(dt,eps)
 %    [phi, mu, mu2] = task.groundstate_itp(dt,eps)
 %  Input
 %    dt    :  evolution time step
 %    eps   :  desired accuracy (applied to chemical potential)
+%    phi0  :  initial approximation of the wave function
 %  Output
 %    phi      :  calculated stationary state
 %    mu       :  array of chemical potential values during evolution
@@ -18,8 +20,11 @@ V = task.getVtotal(0);
 g = task.g*task.Ntotal;
 omega = task.omega;
 n_cn=10;
-
-phi = grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x));
+if(nargin > 3)
+    phi = varargin{1};
+else
+    phi = grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x));
+end
 ekk = exp(-grid.kk*dt);
 MU = zeros(1000,1,'like',grid.mesh.x);
 MU2 = zeros(1000,1,'like',grid.mesh.x);
@@ -50,8 +55,10 @@ while delta > eps
     if(nargout >= 3)
         MU2(i) = real(grid.integrate(abs(conj(phi).*grid.ifft(grid.kk.*grid.fft(phi))) + (V+g*tmp2).*tmp2));
     end
-    delta = abs(mu_old-mu)/dt;
-    mu_old = mu;
+    if(i>50)
+        delta = abs(log(mu_old/mu))/dt^2*10;
+        mu_old = MU(i-10);
+    end
     i=i+1;
 end
 
