@@ -17,13 +17,16 @@ slice0 = slice(:,:);
 maxx = max(max(abs(slice(:,:))));
 [X,Y] = meshgrid(r,r);
 %maxx = 39;
-for j=1:niter_outer
+for j=1:10000
+    if(exist(sprintf('snapshots/slice_%05d.mat',j),'file') ~= 2)
+        break
+    end
     load(sprintf('snapshots/slice_%05d.mat',j));
     clf(f,'reset')
     time = ddt*niter_inner*j;
 %     curangle = (rotangle(time,omegaBar,0.25) + initphase)/pi;
-%     ang1 = angle(sum(sum(slice.*(angles3>(-pi + curangle*pi)).*(angles3<-curangle*pi))));
-%     slice = slice.*exp(-1i*ang1);
+     ang1 = angle(sum(sum(slice.*(XX>0))));% angle(sum(sum(slice.*(angles3>(-pi + curangle*pi)).*(angles3<-curangle*pi))));
+     slice = slice.*exp(-1i*ang1);
 	[coresp, coresm] = detect_core(slice,X,Y);
 % 	[s,v] = velocity_field(slice,r,-(j-1)*dt*1.5*2*pi,slice0);
 %     [s,v] = velocity_field(slice,r,-angles(j)*pi-pi/2,slice0);

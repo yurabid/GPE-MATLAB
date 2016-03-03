@@ -1,4 +1,4 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps,varargin)
+function [phi, varargout] = groundstate_itp(task,dt,eps,phi)
 % groundstate_itp - Calculate the stationary state of GPE with Imaginary Time Propagation method.
 %
 %  Usage :
@@ -19,10 +19,8 @@ grid = task.grid;
 V = task.getVtotal(0);
 g = task.g*task.Ntotal;
 omega = task.omega;
-n_cn=10;
-if(nargin > 3)
-    phi = varargin{1};
-else
+n_cn=task.n_crank;
+if(nargin <= 3)
     phi = grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x));
 end
 ekk = exp(-grid.kk*dt);

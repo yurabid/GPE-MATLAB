@@ -2,22 +2,24 @@ classdef GPEtask < handle
     %GPEtask - Solution of the Gross-Pitaevsii equation
     
     properties
-        grid                   % grid object
-        g                      % coupling coefficient
-        omega = 0.0            % rotation speed
-        gamma = 0.0            % dissipation constant
-        decay_rate = 0         % 1/e decay time (0 for no decay)
-        Ntotal                 % initial total number of particles
-        Vtrap                  % matrix of the trap potential
-        Vtd                    % function handle to the time-dependent potential
-        init_state             % initial state
-        current_state          % current state in dynamics
-        current_time = 0       % current time in dynamics
-        current_iter = 0       % current iteration number in dynamics
-        current_mu = 0         % current chemical potential in dynamics
-        current_n              % current number of particles
-        history                % history of current values
-        user_callback          % user-defined callback function to process data after each step
+        grid               % grid object
+        g                  % coupling coefficient
+        omega = 0.0        % rotation speed
+        n_crank = 10       % number of Crank-Nicolson iterations for L
+        n_recalc = 10      % number of iterations to recalc potential and chem.pot.
+        gamma = 0.0        % dissipation constant
+        decay_rate = 0     % 1/e decay time (0 for no decay)
+        Ntotal             % initial total number of particles
+        Vtrap              % matrix of the trap potential
+        Vtd                % function handle to the time-dependent potential
+        init_state         % initial state
+        current_state      % current state in dynamics
+        current_time = 0   % current time in dynamics
+        current_iter = 0   % current iteration number in dynamics
+        current_mu = 0     % current chemical potential in dynamics
+        current_n          % current number of particles
+        history            % history of current values
+        user_callback      % user-defined callback function to process data after each step
     end
     
     methods
@@ -42,7 +44,10 @@ classdef GPEtask < handle
         end
         
         function res = applyham(obj,phi)
-            res = obj.grid.ifft(obj.grid.kk.*obj.grid.fft(phi)) + obj.getVtotal(obj.current_time).*phi + obj.g*abs(phi).^2.*phi;
+            res = obj.grid.lap(phi) + obj.getVtotal(obj.current_time).*phi + obj.g*abs(phi).^2.*phi;
+            if(obj.omega ~= 0)
+                res = res + obj.omega*obj.grid.lz(phi);
+            end
         end
   end
   
@@ -50,7 +55,7 @@ classdef GPEtask < handle
       
       dispstat(obj,TXT,varargin);
       
-        function ext_callback(obj,phi,step,time,mu)
+        function ext_callback(obj,phi,step,time,mu,n)
             if(exist('snapshots','file') ~= 7)
                 mkdir('snapshots');
             end
@@ -59,21 +64,22 @@ classdef GPEtask < handle
             obj.current_iter = step;
             obj.current_mu = mu;
             obj.history.mu(step) = mu;
-            obj.current_n = obj.grid.norm(phi)^2;
-            obj.history.n(step) = obj.current_n;
+            obj.current_n = n;
+            obj.history.n(step) = n;
 
             if(isa(obj.user_callback,'function_handle'))
                 obj.user_callback(obj);
-            else
-                ndim = numel(size(obj.grid.mesh.x));
-                if(ndim==3)
-                    slice = phi(:,:,obj.grid.nz/2);
-                    densz = sum(abs(phi).^2,3)*(obj.grid.z(2)-obj.grid.z(1));
-                else
-                    slice = phi;
-                    densz = abs(phi).^2;
-                end
-                save(sprintf('snapshots/slice_%05d',step),'slice','densz','time','mu');
+%    SAMPLE POST-PROCESSING CODE             
+%             else
+%                 ndim = numel(size(obj.grid.mesh.x));
+%                 if(ndim==3)
+%                     slice = phi(:,:,obj.grid.nz/2);
+%                     densz = sum(abs(phi).^2,3)*(obj.grid.z(2)-obj.grid.z(1));
+%                 else
+%                     slice = phi;
+%                     densz = abs(phi).^2;
+%                 end
+%                 save(sprintf('snapshots/slice_%05d',step),'slice','densz','time','mu');
             end
             ttime = toc;
             obj.dispstat(sprintf('Splitstep: iter - %u, mu - %0.3f, elapsed time - %0.3f seconds',step,mu,ttime));

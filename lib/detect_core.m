@@ -9,12 +9,12 @@ phi = abs(del2(abs(slice).^2,dx,dy));
 %idx = [0 1 m+1 m 0];
 idx = [0 0; 1 0; 1 1; 0 1];
 nshift = size(idx,1);
-ans = zeros(n,m,nshift);
-dif = zeros(n,m,nshift-1);
+angs = zeros(n,m,nshift,'like',rx);
+% dif = zeros(n,m,nshift-1,'like',rx);
 for i=1:nshift
-	ans(:,:,i) = circshift(an,idx(i,:));
+	angs(:,:,i) = circshift(an,idx(i,:));
 end
-dif = ans - circshift(ans,[0 0 1]);
+dif = angs - circshift(angs,[0 0 1]);
 
 res1 = (sum(dif>pi,3)-sum(dif<-pi,3)).*(phi>0.00001);
 
