@@ -14,10 +14,10 @@ for j=1:10000
     
     time = j*tcoef;
 %     curangle = (rotangle(time,omegaBar,0.25) + initphase)/pi;
-     ang1 = angle(sum(sum(slice.*(task.grid.mesh.x2>0))));% angle(sum(sum(slice.*(angles3>(-pi + curangle*pi)).*(angles3<-curangle*pi))));
-     slice = slice.*exp(-1i*ang1);
-	[coresp, coresm] = detect_core(slice,task.grid.mesh.x2,task.grid.mesh.y2);
-    [a1,a2]=task.grid.image2(slice,f);
+     ang1 = angle(sum(sum(slicez.*(task.grid.mesh.x2>0))));% angle(sum(sum(slice.*(angles3>(-pi + curangle*pi)).*(angles3<-curangle*pi))));
+     slicez = slicez.*exp(-1i*ang1);
+	[coresp, coresm] = detect_core(slicez,task.grid.mesh.x2,task.grid.mesh.y2);
+    [a1,a2]=task.grid.image2(slicez,f);
 % 	[s,v] = velocity_field(slice,r,-(j-1)*dt*1.5*2*pi,slice0);
 %     [s,v] = velocity_field(slice,r,-angles(j)*pi-pi/2,slice0);
 

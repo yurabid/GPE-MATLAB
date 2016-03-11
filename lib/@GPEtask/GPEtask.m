@@ -43,10 +43,13 @@ classdef GPEtask < handle
             end
         end
         
-        function res = applyham(obj,phi)
-            res = obj.grid.lap(phi) + obj.getVtotal(obj.current_time).*phi + obj.g*abs(phi).^2.*phi;
+        function res = applyham(obj,phi,time)
+            if(nargin==2)
+                time = obj.current_time;
+            end
+            res = obj.grid.lap(phi) + obj.getVtotal(time).*phi + obj.g*abs(phi).^2.*phi;
             if(obj.omega ~= 0)
-                res = res + obj.omega*obj.grid.lz(phi);
+                res = res - obj.omega*obj.grid.lz(phi);
             end
         end
   end
@@ -66,9 +69,10 @@ classdef GPEtask < handle
             obj.history.mu(step) = mu;
             obj.current_n = n;
             obj.history.n(step) = n;
+            res_text='';
 
             if(isa(obj.user_callback,'function_handle'))
-                obj.user_callback(obj);
+                res_text=obj.user_callback(obj);
 %    SAMPLE POST-PROCESSING CODE             
 %             else
 %                 ndim = numel(size(obj.grid.mesh.x));
@@ -82,7 +86,7 @@ classdef GPEtask < handle
 %                 save(sprintf('snapshots/slice_%05d',step),'slice','densz','time','mu');
             end
             ttime = toc;
-            obj.dispstat(sprintf('Splitstep: iter - %u, mu - %0.3f, elapsed time - %0.3f seconds',step,mu,ttime));
+            obj.dispstat(sprintf(['Splitstep: iter - %u, mu - %0.3f, elapsed time - %0.3f seconds; ',res_text],step,mu,ttime));
         end
     end
     

@@ -1,4 +1,4 @@
-classdef grid2dgpu < handle
+classdef grid2d < handle
   %  Three-dimensional grid for solution of non-linear Schroedinger equation.
   
 %%  Properties
@@ -21,7 +21,7 @@ classdef grid2dgpu < handle
 %%  Methods
   methods
     
-    function obj = grid2dgpu( varargin )
+    function obj = grid2d( varargin )
       %  Initialize 3D grid.
       %
       %  Usage :
