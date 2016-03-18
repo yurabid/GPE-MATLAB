@@ -33,7 +33,7 @@ else
     phi = task.init_state;
 end
 
-tmp2 = (phi.*conj(phi));
+tmp2 = real(phi.*conj(phi));
 
 mu = real(grid.inner(phi,task.applyham(phi)))./NN0;
 
@@ -71,7 +71,7 @@ for j=start+1:niter_outer
         end
         
         phi = exp((VV - mu + g*phi.*conj(phi))*dt/2).*phi;
-        tmp2 = (phi.*conj(phi));
+        tmp2 = real(phi.*conj(phi));
         
         if(gam>0)
             if(tau >0)

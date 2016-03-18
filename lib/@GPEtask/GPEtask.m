@@ -52,6 +52,16 @@ classdef GPEtask < handle
                 res = res - obj.omega*obj.grid.lz(phi);
             end
         end
+        
+        function res = applyh0(obj,phi,time)
+            if(nargin==2)
+                time = obj.current_time;
+            end
+            res = obj.grid.lap(phi) + obj.getVtotal(time).*phi;
+            if(obj.omega ~= 0)
+                res = res - obj.omega*obj.grid.lz(phi);
+            end
+        end
   end
   
   methods (Access = private) 
