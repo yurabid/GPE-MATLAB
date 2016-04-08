@@ -17,8 +17,6 @@ end
 %  number of grid points
 [ nx, ny, nz ] = deal( numel( x ), numel( y ), numel( z ) );
 [ obj.nx, obj.ny, obj.nz ] = deal( nx, ny, nz );
-%  total number of grid points
-obj.n = nx * ny * nz;
 %  spatial increment
 dx = x( 2 ) - x( 1 );
 dy = y( 2 ) - y( 1 );
@@ -34,21 +32,6 @@ kz = ([ (0:nz/2) -(nz/2-1:-1:1)]*pi/z(end));
 
 [ kx, ky, kz ] = meshgrid( kx, ky, kz );
 obj.kk = (kx.^2+ky.^2+kz.^2)/2;
-
-obj.kx = (2 * pi * ( 0 : nx - 1 ) / nx);
-obj.ky = (2 * pi * ( 0 : ny - 1 ) / ny);
-obj.kz = (2 * pi * ( 0 : nz - 1 ) / nz);
-%  make mesh
-[ kx, ky, kz ] = meshgrid( obj.kx, obj.ky, obj.kz );
-                     
-%  Laplace operator in Fourier space
-obj.ilap = - 2 * ( 1 - cos( kx ) ) / dx ^ 2 -  ...
-             2 * ( 1 - cos( ky ) ) / dy ^ 2 -  ...
-             2 * ( 1 - cos( kz ) ) / dz ^ 2;
-%  derivatives in Fourier space
-obj.igradx = 1i * sin( kx ) / dx;
-obj.igrady = 1i * sin( ky ) / dy;
-obj.igradz = 1i * sin( kz ) / dz;
 
 %%  meshgrid coordinates
 %  mesh grid data 

@@ -3,7 +3,6 @@ classdef grid3dgpu < handle
   
 %%  Properties
   properties
-    n           %  NOT USED - number of positions
     nx          %  number of x positions
     ny          %  number of y positions
     nz          %  number of z positions
@@ -12,13 +11,6 @@ classdef grid3dgpu < handle
     z           %  positions of grid along z
     weight      %  integration weight
     kk          %  Laplace operator in Fourier space
-    kx          %  NOT USED - wavenumbers along x
-    ky          %  NOT USED - wavenumbers along y
-    kz          %  NOT USED - wavenumbers along z
-    igradx      %  NOT USED - Fourier transform of derivative operator along x
-    igrady      %  NOT USED - Fourier transform of derivative operator along y
-    igradz      %  NOT USED - Fourier transform of derivative operator along y
-    ilap        %  NOT USED - Fourier transform of Laplace operator
     mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
   end
   

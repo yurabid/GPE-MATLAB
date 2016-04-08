@@ -3,18 +3,12 @@ classdef grid2d < handle
   
 %%  Properties
   properties
-    n           %  NOT USED - number of positions
     nx          %  number of x positions
     ny          %  number of y positions
     x           %  positions of grid along x
     y           %  positions of grid along y
     weight      %  integration weight
     kk          %  Laplace operator in Fourier space
-    kx          %  NOT USED - wavenumbers along x
-    ky          %  NOT USED - wavenumbers along y
-    igradx      %  NOT USED - Fourier transform of derivative operator along x
-    igrady      %  NOT USED - Fourier transform of derivative operator along y
-    ilap        %  NOT USED - Fourier transform of Laplace operator
     mesh        %  meshgrid coordinates for x, y (also z=0, x2=x, y2=y are included for compatibility)
   end
   
