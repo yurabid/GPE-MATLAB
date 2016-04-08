@@ -31,6 +31,10 @@ classdef GPEtask < handle
             elseif(isa(trappot,'function_handle'))
                 obj.Vtrap = trappot(grid.mesh.x,grid.mesh.y,grid.mesh.z);
             end
+            rng('shuffle');
+            if(isa(grid.mesh.x,'gpuArray'))
+                parallel.gpu.rng('shuffle');
+            end
             obj.dispstat('','init');
             obj.history = struct('mu',zeros(1,0,'like',grid.mesh.x),'n',zeros(1,0,'like',grid.mesh.x));
         end
@@ -82,21 +86,15 @@ classdef GPEtask < handle
             res_text='';
 
             if(isa(obj.user_callback,'function_handle'))
-                res_text=obj.user_callback(obj);
-%    SAMPLE POST-PROCESSING CODE             
-%             else
-%                 ndim = numel(size(obj.grid.mesh.x));
-%                 if(ndim==3)
-%                     slice = phi(:,:,obj.grid.nz/2);
-%                     densz = sum(abs(phi).^2,3)*(obj.grid.z(2)-obj.grid.z(1));
-%                 else
-%                     slice = phi;
-%                     densz = abs(phi).^2;
-%                 end
-%                 save(sprintf('snapshots/slice_%05d',step),'slice','densz','time','mu');
+                if(nargout(obj.user_callback) ~= 0)
+                    res_text=obj.user_callback(obj);
+                else
+                    res_text='';
+                    obj.user_callback(obj);
+                end
             end
             ttime = toc;
-            obj.dispstat(sprintf(['Splitstep: iter - %u, mu - %0.3f, elapsed time - %0.3f seconds; ',res_text],step,mu,ttime));
+            obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
         end
     end
     

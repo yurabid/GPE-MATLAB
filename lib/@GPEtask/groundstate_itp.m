@@ -44,7 +44,8 @@ while delta > eps && i<5000
             end
             phi = phi + dt*omega*grid.lz(lphi);
         end
-    phi = exp(-(V + g*phi.*conj(phi))*dt*0.5).*phi;
+    phi = exp(-(V + g*tmp2)*dt*0.5).*phi;
+    
 	tmp2 = real(phi.*conj(phi));
     mu = sqrt(1.0/grid.integrate(tmp2));
     phi=phi*mu;
