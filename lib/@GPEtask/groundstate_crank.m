@@ -1,11 +1,11 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
-% groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
+function [phi, varargout] = groundstate_crank(task,dt,eps,phi0)
+% groundstate_crank - Calculate the stationary state of GPE with Crank-Nicholson Imaginary Time Propagation method.
 %
 %  Usage :
-%    phi = task.groundstate_itp(dt,eps)
-%    phi = task.groundstate_itp(dt,eps,phi0)
-%    [phi, mu] = task.groundstate_itp(dt,eps)
-%    [phi, mu, mu2] = task.groundstate_itp(dt,eps)
+%    phi = task.groundstate_crank(dt,eps)
+%    phi = task.groundstate_crank(dt,eps,phi0)
+%    [phi, mu] = task.groundstate_crank(dt,eps)
+%    [phi, mu, mu2] = task.groundstate_crank(dt,eps)
 %  Input
 %    dt    :  evolution time step
 %    eps   :  desired accuracy (applied to chemical potential)
@@ -17,6 +17,7 @@ function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
 
 grid = task.grid;
 V = task.getVtotal(0);
+task.V0 = V;
 g = task.g*task.Ntotal;
 omega = task.omega;
 n_cn=task.n_crank;
@@ -25,34 +26,30 @@ if(nargin <= 3)
 else
     phi = grid.normalize(phi0);
 end
-ekk = exp(-grid.kk*dt);
+
 MU = zeros(1000,1,'like',grid.mesh.x);
 MU2 = zeros(1000,1,'like',grid.mesh.x);
 delta = 1;
 mu_old = 0;
 i = 1;
-
-tmp2 = real(phi.*conj(phi))*g+V;
+tmp2 = real(phi.*conj(phi));
 while delta > eps && i<5000
-    phi = exp(-tmp2*dt*0.5).*phi;
-    phi = grid.ifft(ekk.*grid.fft(phi));
-        if(omega ~= 0)
-            lphi = phi;
-            for ii = 1:n_cn
-                lphi = phi + dt*omega*grid.lz(lphi);
-                lphi = 0.5*(phi+lphi);
-            end
-            phi = phi + dt*omega*grid.lz(lphi);
-        end
-    phi = exp(-tmp2*dt*0.5).*phi;
+
+    lphi = phi;
+    for ii = 1:n_cn
+        lphi = phi - dt*(task.applyh0(lphi,0) + g*tmp2.*lphi);
+        lphi = 0.5*(phi+lphi);
+    end
+    phi = phi - dt*(task.applyh0(lphi,0) + g*tmp2.*lphi);
+
     
 	tmp2 = real(phi.*conj(phi));
     mu = sqrt(1.0/grid.integrate(tmp2));
     phi=phi*mu;
-	tmp2 = tmp2*mu^2*g+V;
+	tmp2 = tmp2*mu^2;
     MU(i) = mu;
     if(nargout >= 3)
-        MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + real(phi.*conj(phi)).*tmp2));
+        MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + (V+g*tmp2).*tmp2));
         if(omega ~= 0)
             MU2(i) = MU2(i) - omega*real(grid.integrate(conj(phi).*grid.lz(phi)));
         end
@@ -62,7 +59,7 @@ while delta > eps && i<5000
         mu_old = MU(i-10);
     end
     i=i+1;
-    
+
 end
 
 if(nargout >= 2)

@@ -5,13 +5,14 @@ classdef GPEtask < handle
         grid               % grid object
         g                  % coupling coefficient
         omega = 0.0        % rotation speed
-        n_crank = 10       % number of Crank-Nicolson iterations for L
+        n_crank = 3        % number of Crank-Nicolson iterations for L
         n_recalc = 10      % number of iterations to recalc potential and chem.pot.
         gamma = 0.0        % dissipation constant
         decay_rate = 0     % 1/e decay time (0 for no decay)
         Ntotal             % initial total number of particles
         Vtrap              % matrix of the trap potential
         Vtd                % function handle to the time-dependent potential
+        V0 = 0             % INTERNAL: total potential at t=0  
         init_state         % initial state
         current_state      % current state in dynamics
         current_time = 0   % current time in dynamics
@@ -40,7 +41,9 @@ classdef GPEtask < handle
         end
         
         function v = getVtotal(obj,time)
-            if(isa(obj.Vtd,'function_handle'))
+            if(time == 0 && numel(obj.V0)>1)
+                v = obj.V0;
+            elseif(isa(obj.Vtd,'function_handle'))
                 v = bsxfun(@plus,obj.Vtrap,obj.Vtd(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
             else
                 v = obj.Vtrap;

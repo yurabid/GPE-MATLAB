@@ -11,7 +11,7 @@ function phi = solve_split(task,ddt,niter_inner,niter_outer)
 %    phi       :  final state
 
 task.dispstat('','init');
-% Initialize basic parameters
+
 grid = task.grid;
 % VV = task.getVtotal(0);
 g = task.g;
@@ -34,20 +34,13 @@ else
 end
 
 tmp2 = real(phi.*conj(phi));
-
 mu = real(grid.inner(phi,task.applyham(phi)))./NN0;
-
-% muprev = mu;
-% mu0=mu;
-% dt = ddt*1i/(1+1i*gam); % time step (with gamma included)
 dt_outer = ddt*niter_inner;
-% ncur = grid.integrate(tmp2);
 % main BIG cycle starts here
 for j=start+1:niter_outer
     time=(j-1)*dt_outer;
     for jj=1:niter_inner/n_rec
         
-        mu_run = mu;
         time2=time+(jj-1)*ddt*n_rec;
         VV = task.getVtotal(time2);
         phi = exp((mu - VV - g*tmp2)*dt/2).*phi;
@@ -63,11 +56,7 @@ for j=start+1:niter_outer
                 phi = phi + dt*omega*grid.lz(lphi);
             end
             
-            %         if(tau>0)
-            %             mu_run = (mu + (mu0-mu)*i*ddt/dt_outer)*exp(-i*ddt/tau);
-            %             mu_run = mu*exp(-i*ddt/tau);
-            %         end
-            phi = exp((mu_run - VV - g*phi.*conj(phi))*dt).*phi;
+            phi = exp((mu - VV - g*phi.*conj(phi))*dt).*phi;
         end
         
         phi = exp((VV - mu + g*phi.*conj(phi))*dt/2).*phi;
@@ -78,18 +67,17 @@ for j=start+1:niter_outer
                 NNN = NN0*exp(-time2/tau);
             end
             
-            %         nprev = ncur;
             ncur = grid.integrate(tmp2);
             phi = phi*sqrt(NNN/ncur);
             tmp2 = tmp2*(NNN/ncur);
             mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
-            %         muprev = (mu0+muprev)/2;
-            %         mu = mu - log(ncur/NNN)/(dt_outer*2*gam);
-            %         mu = real(mu0) - log(ncur/NNN)/(dt_outer*2*gam);% - (ncur-nprev)/(gam*(ncur+nprev)*dt_outer);
 
+        else
+            ncur = grid.integrate(tmp2);
+            mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
         end
     end
-    task.ext_callback(phi,j,time2,mu,NNN);
+    task.ext_callback(phi,j,time2,mu,ncur);
     
 end
 
