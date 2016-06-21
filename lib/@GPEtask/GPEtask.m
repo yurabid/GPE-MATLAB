@@ -71,7 +71,7 @@ classdef GPEtask < handle
         end
   end
   
-  methods (Access = private) 
+  methods (Access = protected) 
       
       dispstat(obj,TXT,varargin);
       
