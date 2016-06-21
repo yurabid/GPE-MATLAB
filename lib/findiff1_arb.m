@@ -1,5 +1,5 @@
 function A = findiff1_arb(r,n,is_periodic)
-% build a second derivative matrix for arbitrary FD grid r with 3-point stencil
+% build a n-th derivative matrix for arbitrary FD grid r with N-point stencil
 if(nargin==1)
     n=2;
 end
@@ -9,7 +9,7 @@ end
 Ntot = length(r);
 r=[3*r(1)-2*r(2) 2*r(1)-r(2) r 2*r(end)-r(end-1) 3*r(end)-2*r(end-1)];
 A=zeros(Ntot,Ntot);
-N_stencil = 3;
+N_stencil = 5;
 max_stencil = (N_stencil-1)/2;
 ind = -max_stencil:max_stencil;
 for i=3:Ntot+2
