@@ -33,7 +33,7 @@ mu_old = 0;
 i = 1;
 
 tmp2 = real(phi.*conj(phi))*g+V;
-while delta > eps && i<5000
+while delta > eps
     phi = exp(-tmp2*dt*0.5).*phi;
     phi = grid.ifft(ekk.*grid.fft(phi));
         if(omega ~= 0)
@@ -46,13 +46,14 @@ while delta > eps && i<5000
         end
     phi = exp(-tmp2*dt*0.5).*phi;
     
-	tmp2 = real(phi.*conj(phi));
-    mu = sqrt(1.0/grid.integrate(tmp2));
+	tmp = real(phi.*conj(phi));
+    mu = sqrt(1.0/grid.integrate(tmp));
     phi=phi*mu;
-	tmp2 = tmp2*mu^2*g+V;
+	tmp = tmp*mu^2;
+	tmp2 = tmp*g+V;
     MU(i) = mu;
     if(nargout >= 3)
-        MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + real(phi.*conj(phi)).*tmp2));
+        MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + tmp.*tmp2));
         if(omega ~= 0)
             MU2(i) = MU2(i) - omega*real(grid.integrate(conj(phi).*grid.lz(phi)));
         end
@@ -62,7 +63,10 @@ while delta > eps && i<5000
         mu_old = MU(i-10);
     end
     i=i+1;
-    
+    if(i>=5000) 
+        warning('Convergence not reached');
+        break;
+    end
 end
 
 if(nargout >= 2)

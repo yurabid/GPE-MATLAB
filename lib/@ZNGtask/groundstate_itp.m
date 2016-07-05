@@ -38,7 +38,7 @@ mu_old = 0;
 i = 1;
 
 tmp2 = real(phi.*conj(phi))*g+V;
-while delta > eps && i<5000
+while delta > eps
     phi = exp(-tmp2*dt*0.5).*phi;
     phi = grid.ifft(ekk.*grid.fft(phi));
         if(omega ~= 0)
@@ -52,7 +52,7 @@ while delta > eps && i<5000
     phi = exp(-tmp2*dt*0.5).*phi;
     
 	tmp = real(phi.*conj(phi));
-    if(TT>0 && i>150) % for better performance and stability we do one half of total iterations without a thermal cloud
+    if(TT>0 && i>150) % for better performance and stability we do some initial iterations without a thermal cloud
         NNt = grid.integrate(nt);
         NNN = NN0 - NNt;
         if(NNN<1)
@@ -65,7 +65,7 @@ while delta > eps && i<5000
 	tmp = tmp*mu^2;
 	tmp2 = tmp*g+V;
     MU(i) = mu;
-    MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + tmp.*tmp2));
+    MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + tmp.*(tmp2+2*g*nt)));
     if(omega ~= 0)
         MU2(i) = MU2(i) - omega*real(grid.integrate(conj(phi).*grid.lz(phi)));
     end
@@ -73,7 +73,7 @@ while delta > eps && i<5000
     if(i>150)
 		if(TT>0)
 		    mmu = min(MU2(i),min(min(min(V+2*g*(tmp+nt))))-1e-10); % compensate for possibly inaccurate chem. pot. calculation
-		    ntt=((TT/2/pi)^(3/2)*polylog(3/2,exp((mmu-V-2*g*(tmp+nt))/TT))); % averaging increases stability for high temperatures
+		    ntt=(TT/(2*pi))^1.5*polylog(1.5,exp((mmu-V-2*g*(tmp+nt))/TT)); % averaging increases stability for high temperatures
 		    if(NNN<=1)
 		        NNt = grid.integrate(ntt);
 		        nt = (nt+ntt*NN0/NNt)*0.5;
@@ -84,9 +84,12 @@ while delta > eps && i<5000
         delta = abs(log(mu_old/mu))/dt^2/10;
         mu_old = MU(i-10);
     end
-	tmp2 = tmp2 + 2*nt;
+	tmp2 = tmp2 + 2*g*nt;
     i=i+1;
-    imagesc(abs(nt(:,:,16)));drawnow;
+    if(i>=5000) 
+        warning('Convergence not reached');
+        break;
+    end
 end
 
 if(nargout >= 2)

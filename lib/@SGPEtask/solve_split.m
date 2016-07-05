@@ -64,20 +64,11 @@ for j=start+1:niter_outer
         phi = exp((VV - mu + g*phi.*conj(phi))*dt/2).*phi;
         tmp2 = real(phi.*conj(phi));
         
-        if(gam>0)
-            if(tau >0)
-                NNN = NN0*exp(-time2/tau);
-            end
+%         if(tau >0)
+%             NNN = NN0*exp(-time2/tau);
+%         end
             
-            ncur = grid.integrate(tmp2);
-%             phi = phi*sqrt(NNN/ncur);
-%             tmp2 = tmp2*(NNN/ncur);
-%             mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
-
-        else
-            ncur = grid.integrate(tmp2);
-            mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
-        end
+        ncur = grid.integrate(tmp2);
     end
     task.ext_callback(phi,j,time2,mu,ncur);
     
