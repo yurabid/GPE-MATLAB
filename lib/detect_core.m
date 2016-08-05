@@ -1,34 +1,25 @@
-function [resp,resm] = detect_core(slice,rx,ry)
-[n, m] = size(slice);
+function [resp,resm] = detect_core(phi,rx,ry)
+% Detect vortex cores on a 2D slice of the wave function
+% IN:
+%   - phi: 2D array of complex numbers (slice of the wave function)
+%   - rx, ry: grid of coordinate ponts in x and y 
+% OUT:
+%   - resp, resm: 2D arrays, each row  represents one detected vortex and contain [x,y] of the core. 
+%                 resp (resm) contains only positive (negative) charged vortices
+
+[n, m] = size(phi);
 dx = rx(1,2)-rx(1,1);
 dy = ry(2,1)-ry(1,1);
-an = angle(slice);
-phi = abs(del2(abs(slice).^2,dx,dy));
-%idx = [-1 -m 1 m -1];
-%idx = [-m-1 -m+1 m+1 m-1 -m-1];
-%idx = [0 1 m+1 m 0];
+an = angle(phi);
+ddphi = abs(del2(abs(phi).^2,dx,dy));
 idx = [0 0; 1 0; 1 1; 0 1];
 nshift = size(idx,1);
 angs = zeros(n,m,nshift,'like',rx);
-% dif = zeros(n,m,nshift-1,'like',rx);
 for i=1:nshift
 	angs(:,:,i) = circshift(an,idx(i,:));
 end
 dif = angs - circshift(angs,[0 0 1]);
-
-res1 = (sum(dif>pi,3)-sum(dif<-pi,3)).*(phi>0.00001);
-
-%an1 = circshift(an,[1,0]);
-%an2 = circshift(an,[1,1]);
-%an3 = circshift(an,[0,1]);
-
-%diff1 = an1 - an;
-%diff2 = an2 - an1;
-%diff3 = an3 - an2;
-%diff4 = an - an3;
-
-%res = ((diff1>pi) + (diff2>pi) + (diff3>pi) + (diff4>pi) - (diff1<-pi) - (diff2<-pi) - (diff3<-pi) - (diff4<-pi))>0;
-
+res1 = (sum(dif>pi,3)-sum(dif<-pi,3)).*(ddphi>0.00001);
 res = res1>0;
 resp = [rx(res)-dx/2 ry(res)-dy/2];
 res = res1<0;

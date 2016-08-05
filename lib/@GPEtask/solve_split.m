@@ -16,7 +16,11 @@ grid = task.grid;
 % VV = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
-NN0=task.Ntotal;
+if(task.Ntotal > 0)
+    NN0 = task.Ntotal;
+else
+    NN0 = grid.integrate(abs(task.init_state).^2);
+end
 NNN=NN0;
 gam = task.gamma;
 n_cn = task.n_crank;

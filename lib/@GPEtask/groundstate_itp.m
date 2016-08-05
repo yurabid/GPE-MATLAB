@@ -17,13 +17,18 @@ function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
 
 grid = task.grid;
 V = task.getVtotal(0);
-g = task.g*task.Ntotal;
+g = task.g;
 omega = task.omega;
 n_cn=task.n_crank;
-if(nargin <= 3)
-    phi = grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(size(grid.mesh.x),'like',grid.mesh.x));
+if(task.Ntotal > 0)
+    nnn = task.Ntotal;
 else
-    phi = grid.normalize(phi0);
+    nnn = 1;
+end
+if(nargin <= 3)
+    phi = sqrt(nnn)*grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(size(grid.mesh.x),'like',grid.mesh.x));
+else
+    phi = sqrt(nnn)*grid.normalize(phi0);
 end
 ekk = exp(-grid.kk*dt);
 MU = zeros(1000,1,'like',grid.mesh.x);
@@ -47,11 +52,17 @@ while delta > eps
     phi = exp(-tmp2*dt*0.5).*phi;
     
 	tmp = real(phi.*conj(phi));
-    mu = sqrt(1.0/grid.integrate(tmp));
+    if(task.Ntotal > 0)
+        mu = sqrt(task.Ntotal/grid.integrate(tmp));
+        MU(i) = mu;
+    else
+        mu = exp(task.mu_init*dt);
+        MU(i) = grid.integrate(tmp*mu^2);
+    end
     phi=phi*mu;
 	tmp = tmp*mu^2;
 	tmp2 = tmp*g+V;
-    MU(i) = mu;
+    
     if(nargout >= 3)
         MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + tmp.*tmp2));
         if(omega ~= 0)
@@ -59,7 +70,11 @@ while delta > eps
         end
     end
     if(i>50)
-        delta = abs(log(mu_old/mu))/dt^2/10;
+        if(task.Ntotal > 0)
+            delta = abs(log(mu_old/mu))/dt^2/10;
+        else
+            delta = abs(MU(i)-mu_old)/dt/10;
+        end
         mu_old = MU(i-10);
     end
     i=i+1;
@@ -71,13 +86,19 @@ end
 
 if(nargout >= 2)
     MU = MU(1:nnz(MU));
-    MU = 1/dt * log(MU);
+    if(task.Ntotal > 0)
+        MU = 1/dt * log(MU);
+    end
     varargout{1} = MU;
 end
 if(nargout >= 3)
-    MU2 = MU2(1:nnz(MU2));
+    if(task.Ntotal > 0)
+       MU2 = MU2(1:nnz(MU2))/task.Ntotal;
+    else
+       MU2 = MU2(1:nnz(MU2))./MU; 
+    end
     varargout{2} = MU2;
 end
-phi = phi * sqrt(task.Ntotal);
+phi = phi;
 task.init_state = phi;
 end

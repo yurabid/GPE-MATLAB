@@ -9,7 +9,8 @@ classdef GPEtask < handle
         n_recalc = 10      % number of iterations to recalc potential and chem.pot.
         gamma = 0.0        % dissipation constant
         decay_rate = 0     % 1/e decay time (0 for no decay)
-        Ntotal             % initial total number of particles
+        Ntotal = 0         % initial total number of particles
+        mu_init = 0        % initial chemical potential
         Vtrap              % matrix of the trap potential
         Vtd                % function handle to the time-dependent potential
         V0 = 0             % INTERNAL: total potential at t=0  

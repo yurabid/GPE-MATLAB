@@ -5,6 +5,7 @@ classdef ZNGtask < GPEtask
         T=0               % temperature
         init_state_nt         % initial state (thermal cloud)
         current_state_nt      % current state in dynamics (thermal cloud)
+        n_test=1e6            % number of test particles
     end
     
     methods

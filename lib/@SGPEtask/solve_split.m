@@ -16,8 +16,12 @@ grid = task.grid;
 % VV = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
-NN0=task.Ntotal;
-NNN=NN0;
+if(task.Ntotal > 0)
+    NN0 = task.Ntotal;
+else
+    NN0 = grid.integrate(abs(task.init_state).^2);
+end
+% NNN=NN0;
 gam = task.gamma;
 n_cn = task.n_crank;
 n_rec = task.n_recalc;
@@ -34,7 +38,7 @@ else
 end
 
 tmp2 = real(phi.*conj(phi));
-mu = real(grid.inner(phi,task.applyham(phi)))./NN0;
+mu = real(grid.inner(task.init_state,task.applyham(task.init_state)))./NN0;
 dt_outer = ddt*niter_inner;
 sz = size(grid.mesh.x);
 variance = sqrt(task.T*gam*ddt/grid.weight);

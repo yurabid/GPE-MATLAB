@@ -1,4 +1,4 @@
-function [y errors] = polylog(n,z) 
+function [y, errors] = polylog(n,z) 
 %% polylog - Computes the n-based polylogarithm of z: Li_n(z)
 % Approximate closed form expressions for the Polylogarithm aka de 
 % Jonquiere's function are used. Computes reasonably faster than direct
@@ -15,12 +15,8 @@ function [y errors] = polylog(n,z)
 % Approximation should be correct up to at least 5 digits for |z| > 0.55
 % and on the order of 10 digits for |z| <= 0.55!
 %
-% Please Note: z vector input is possible but not recommended as precision
-% might drop for big ranged z inputs (unresolved Matlab issue unknown to 
-% the author). 
-%
 % following V. Bhagat, et al., On the evaluation of generalized
-% Bose�Einstein and Fermi�Dirac integrals, Computer Physics Communications,
+% Bose-Einstein and Fermi-Dirac integrals, Computer Physics Communications,
 % Vol. 155, p.7, 2003
 %
 % v3 20120616
@@ -70,8 +66,6 @@ end
 % display more digits in Matlab terminal:
 %format long
 
-
-
 % if |z| > 0.55 use Eq. (27) else use Eq. (21):
 y = z.*0;
 hind = abs(z) > 0.55;
@@ -79,14 +73,19 @@ zh = z(hind);
 alpha = -log(zh); % see page 12
 %if abs(z) > 0.55
     preterm = gamma(1-n)./alpha.^(1-n);
-    nominator = b(0) + ...
-        - alpha.*( b(1) - 4*b(0)*b(4)/7/b(3) ) + ...
-        + alpha.^2.*( b(2)/2 + b(0)*b(4)/7/b(2) - 4*b(1)*b(4)/7/b(3) ) + ...
-        - alpha.^3.*( b(3)/6 - 2*b(0)*b(4)/105/b(1) + b(1)*b(4)/7/b(2) - 2*b(2)*b(4)/7/b(3) );
-    denominator = 1 + alpha.*4*b(4)/7/b(3) +...
-        + alpha.^2.*b(4)/7/b(2) +...
-        + alpha.^3.*2*b(4)/105/b(1) +...
-        + alpha.^4.*b(4)/840/b(0);
+    b0 = b(0);
+    b1 = b(1);
+    b2 = b(2);
+    b3 = b(3);
+    b4 = b(4);
+    nominator = b0 + ...
+        - alpha.*( b1 - 4*b0*b4/(7*b3) ) + ...
+        + alpha.^2.*( b2/2 + b0*b4/(7*b2) - 4*b1*b4/(7*b3) ) + ...
+        - alpha.^3.*( b3/6 - 2*b0*b4/(105*b1) + b1*b4/(7*b2) - 2*b2*b4/(7*b3) );
+    denominator = 1 + alpha.*4*b4/(7*b3) +...
+        + alpha.^2.*b4/(7*b2) +...
+        + alpha.^3.*2*b4/(105*b1) +...
+        + alpha.^4.*b4/(840*b0);
     yy = preterm + nominator ./ denominator;
     y(hind) = yy;
 %else
@@ -118,17 +117,17 @@ zl = z(lind);
         out = zeta(n-i);
     end
 % define S as partial sums of Eq. 12:
-    function out = S(n,z,j)
-        out =0;
-        for i=1:j
-            out = out + z.^i./i^n;
-        end
-    end
+%     function out = S(n,z,j)
+%         out =0;
+%         for i=1:j
+%             out = out + z.^i./i^n;
+%         end
+%     end
     function [out] = zeta(x)
         %% Zeta Function  
         % Eq. 18
         % following V. Bhagat, et al., On the evaluation of generalized
-        % Bose�Einstein and Fermi�Dirac integrals, Computer Physics Communications,
+        % Bose-Einstein and Fermi-Dirac integrals, Computer Physics Communications,
         % Vol. 155, p.7, 2003
         %
         % Usage: [out] = zeta(x)
@@ -139,15 +138,15 @@ zl = z(lind);
         prefactor = 2^(x-1) / ( 2^(x-1)-1 );
         numerator = 1 + 36*2^x*eta(x,2) + 315*3^x*eta(x,3) + 1120*4^x*eta(x,4) +...
             + 1890*5^x*eta(x,5) + 1512*6^x*eta(x,6) + 462*7^x*eta(x,7);
-        denominator = 1 + 36*2^x + 315*3^x + 1120*4^x + 1890*5^x + 1512*6^x +...
+        denom = 1 + 36*2^x + 315*3^x + 1120*4^x + 1890*5^x + 1512*6^x +...
             + 462*7^x;
-        out = prefactor * numerator / denominator;
+        out = prefactor * numerator / denom;
 
         function [out] = eta(x,j)
             %% Eta Function  
             % Eq. 17 (partial sums)
             % following V. Bhagat, et al., On the evaluation of generalized
-            % Bose�Einstein and Fermi�Dirac integrals, Computer Physics Communications,
+            % Bose-Einstein and Fermi-Dirac integrals, Computer Physics Communications,
             % Vol. 155, p.7, 2003
             %
             % Usage: [out] = eta(x,j)

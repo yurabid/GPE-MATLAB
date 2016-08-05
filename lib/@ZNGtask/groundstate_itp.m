@@ -21,7 +21,11 @@ g = task.g;
 omega = task.omega;
 n_cn=task.n_crank;
 TT = task.T;
-NN0 = task.Ntotal;
+if(task.Ntotal > 0)
+    NN0 = task.Ntotal;
+else
+    NN0 = 1;
+end
 if(nargin <= 3)
     phi = sqrt(NN0)*grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(size(grid.mesh.x),'like',grid.mesh.x));
 else
@@ -52,7 +56,7 @@ while delta > eps
     phi = exp(-tmp2*dt*0.5).*phi;
     
 	tmp = real(phi.*conj(phi));
-    if(TT>0 && i>150) % for better performance and stability we do some initial iterations without a thermal cloud
+    if(TT>0 && i>150 && task.Ntotal > 0) % for better performance and stability we do some initial iterations without a thermal cloud
         NNt = grid.integrate(nt);
         NNN = NN0 - NNt;
         if(NNN<1)
@@ -60,28 +64,41 @@ while delta > eps
             nt = nt*NN0/NNt; % we need to get the correct total number of particles even above Tc
         end
     end
-    mu = sqrt(NNN/grid.integrate(tmp));
+    ncur = grid.integrate(tmp);
+    if(task.Ntotal > 0)
+        mu = sqrt(NNN/ncur);
+        MU(i) = mu;
+        ncur = ncur*mu^2;
+    else
+        mu = exp(task.mu_init*dt);
+        ncur = ncur*mu^2;
+        MU(i) = ncur;
+    end
     phi=phi*mu;
 	tmp = tmp*mu^2;
 	tmp2 = tmp*g+V;
-    MU(i) = mu;
+%     MU(i) = mu;
     MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + tmp.*(tmp2+2*g*nt)));
     if(omega ~= 0)
         MU2(i) = MU2(i) - omega*real(grid.integrate(conj(phi).*grid.lz(phi)));
     end
-
+    MU2(i) = MU2(i)/ncur;
     if(i>150)
 		if(TT>0)
 		    mmu = min(MU2(i),min(min(min(V+2*g*(tmp+nt))))-1e-10); % compensate for possibly inaccurate chem. pot. calculation
 		    ntt=(TT/(2*pi))^1.5*polylog(1.5,exp((mmu-V-2*g*(tmp+nt))/TT)); % averaging increases stability for high temperatures
-		    if(NNN<=1)
+		    if(NNN<=1 && task.Ntotal > 0)
 		        NNt = grid.integrate(ntt);
 		        nt = (nt+ntt*NN0/NNt)*0.5;
 		    else
 		        nt=(nt+ntt)*0.5;
 		    end
 		end
-        delta = abs(log(mu_old/mu))/dt^2/10;
+        if(task.Ntotal > 0)
+            delta = abs(log(mu_old/mu))/dt^2/10;
+        else
+            delta = abs(MU(i)-mu_old)/dt/10;
+        end
         mu_old = MU(i-10);
     end
 	tmp2 = tmp2 + 2*g*nt;
@@ -93,12 +110,14 @@ while delta > eps
 end
 
 if(nargout >= 2)
-    MU = MU(1:nnz(MU));
-    MU = 1/dt * log(MU);
+    MU = real(MU(1:nnz(MU)));
+    if(task.Ntotal > 0)
+        MU = 1/dt * log(MU);
+    end
     varargout{1} = MU;
 end
 if(nargout >= 3)
-    MU2 = MU2(1:nnz(MU2));
+    MU2 = real(MU2(1:nnz(MU2)));
     varargout{2} = MU2;
 end
 %phi = phi;
