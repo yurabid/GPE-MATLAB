@@ -1,5 +1,5 @@
 classdef SGPEtask < GPEtask
-    %GPEtask - Solution of the Gross-Pitaevsii equation
+    %SGPEtask - Solution of the stochastic Gross-Pitaevsii equation
     
     properties
         T=0               % temperature

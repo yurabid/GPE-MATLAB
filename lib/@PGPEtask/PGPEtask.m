@@ -1,17 +1,39 @@
-classdef ZNGtask < GPEtask
-    %ZNGtask - Solution of the Zaremba-Nikuni-Griffin equations
+classdef PGPEtask < GPEtask
+    %PGPEtask - Solution of the projected Gross-Pitaevsii equation
     
     properties
         T=0               % temperature
-        init_state_nt         % initial state (thermal cloud)
-        current_state_nt      % current state in dynamics (thermal cloud)
-        n_test=1e6            % number of test particles
+		nbx
+		nby
+		nbz
+		ndim
     end
     
     methods
-        function obj = ZNGtask(grid,trappot)
+        function obj = PGPEtask(grid,trappot)
             obj = obj@GPEtask(grid,trappot);
+%             obj.Vtrap = (obj.Vtrap);
+			obj.ndim = ndims(grid.mesh.x);
         end
+        function res = applyham(obj,phi,time,phir)
+            if(nargin==2)
+                time = obj.current_time;
+            end
+            if(nargin==3)
+                 phir = obj.grid.sp2grid(phi);
+            end            
+            res = obj.grid.etot.*phi + obj.grid.grid2spop((obj.getVtotal(time) + obj.g*abs(phir.^2)).*phir);
+        end
+        
+        function res = applyh0(obj,phi,time,phir)
+           if(nargin==2)
+                time = obj.current_time;
+            end
+            if(nargin==3)
+                 phir = obj.grid.sp2grid(phi);
+            end  
+            res = obj.grid.etot.*phi + obj.grid.grid2spop(obj.getVtotal(time).*phir);
+        end        
     end
   
   methods (Access = protected) 
