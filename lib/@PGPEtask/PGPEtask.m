@@ -3,36 +3,30 @@ classdef PGPEtask < GPEtask
     
     properties
         T=0               % temperature
-		nbx
-		nby
-		nbz
-		ndim
     end
     
     methods
         function obj = PGPEtask(grid,trappot)
             obj = obj@GPEtask(grid,trappot);
-%             obj.Vtrap = (obj.Vtrap);
-			obj.ndim = ndims(grid.mesh.x);
         end
         function res = applyham(obj,phi,time,phir)
             if(nargin==2)
                 time = obj.current_time;
             end
-            if(nargin==3)
+            if(nargin<=3)
                  phir = obj.grid.sp2grid(phi);
             end            
-            res = obj.grid.etot.*phi + obj.grid.grid2spop((obj.getVtotal(time) + obj.g*abs(phir.^2)).*phir);
+            res = obj.grid.etot.*phi + obj.grid.grid2sp((obj.getVtotal(time) + obj.g*abs(phir.^2)).*phir);
         end
         
         function res = applyh0(obj,phi,time,phir)
            if(nargin==2)
                 time = obj.current_time;
             end
-            if(nargin==3)
+            if(nargin<=3)
                  phir = obj.grid.sp2grid(phi);
             end  
-            res = obj.grid.etot.*phi + obj.grid.grid2spop(obj.getVtotal(time).*phir);
+            res = obj.grid.etot.*phi + obj.grid.grid2sp(obj.getVtotal(time).*phir);
         end        
     end
   
@@ -62,6 +56,8 @@ classdef PGPEtask < GPEtask
             end
             ttime = toc;
             obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
+            phir = obj.grid.sp2grid(phi);
+            imagesc(obj.grid.y,obj.grid.x,squeeze(abs(phir(:,:,end/2))));drawnow;
         end
     end
     

@@ -3,12 +3,12 @@ classdef ogrid3d < handle
   
 %%  Properties
   properties
-	omx
-	omy
-	omz
-	ecut
-	nstates
-    npoints
+	omx         % harmonic trap frequency in x direction
+	omy         % harmonic trap frequency in y direction
+	omz         % harmonic trap frequency in z direction
+	ecut        % highest energy of the C region
+	nstates     % total number of basis states
+    npoints     % total number of quadrature grid points
     nx          %  number of x positions
     ny          %  number of y positions
     nz          %  number of z positions
@@ -24,19 +24,18 @@ classdef ogrid3d < handle
     transx      %  transformation matrix along x
     transy      %  transformation matrix along y
     transz      %  transformation matrix along z
-    transmat
     weight      %  integration weight
     kk          %  Laplace operator in Fourier space
     mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
-    wtot
-    etot
-    mask
+    wtot        %  [nx*ny*nz] array of weights for coordinate-space integration
+    etot        %  [nsx*nsy*nsz] array energies of basis states
+    mask        %  [nsx*nsy*nsz] boolean array to cut states above ecut
   end
   
 %%  Methods
   methods
     
-    function obj = ogrid3d( omx, omy, omz, ecut )
+    function obj = ogrid3d( omx, omy, omz, ecut, grid_factor )
       %  Initialize 3D grid.
       %
       %  Usage :
@@ -53,37 +52,32 @@ classdef ogrid3d < handle
         obj.nx = 2*(obj.nsx-1);
         obj.ny = 2*(obj.nsy-1);
         obj.nz = 2*(obj.nsz-1);
-        [obj.x, obj.wx] = obj.gauss_hermite_wrap(obj.nx,2);
-        [obj.y, obj.wy] = obj.gauss_hermite_wrap(obj.ny,2);
-        [obj.z, obj.wz] = obj.gauss_hermite_wrap(obj.nz,2);
+        
+        if(nargin <= 4)
+            grid_factor = 2;
+        end
+        
+        [obj.x, obj.wx] = obj.gauss_hermite_wrap(obj.nx,grid_factor*omx);
+        [obj.y, obj.wy] = obj.gauss_hermite_wrap(obj.ny,grid_factor*omy);
+        [obj.z, obj.wz] = obj.gauss_hermite_wrap(obj.nz,grid_factor*omz);
+        
         obj.transx = obj.trans1(obj.x,obj.nsx,obj.omx);
         obj.transy = obj.trans1(obj.y,obj.nsy,obj.omy);
         obj.transz = obj.trans1(obj.z,obj.nsz,obj.omz);
+        
 		obj.nstates = obj.nsx*obj.nsy*obj.nsz;
         obj.npoints = obj.nx*obj.ny*obj.nz;
-%         obj.transmat = kron(obj.transz,kron(obj.transy,obj.transx));
+
         [y,x,z] = meshgrid(obj.y,obj.x,obj.z);
         [y2, x2] = meshgrid(obj.y, obj.x);
         obj.mesh = struct( 'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2);
         [wy,wx,wz] = meshgrid(obj.wy,obj.wx,obj.wz);
-%         obj.mesh.wx = wx;
-%         obj.mesh.wy = wy;
-%         obj.mesh.wz = wz;
-        obj.wtot = (wx.*wy.*wz.*exp(2*(x.^2+y.^2+z.^2)));
+
+        obj.wtot = (wx.*wy.*wz.*exp(grid_factor*(omx*x.^2+omy*y.^2+omz*z.^2)));
         [i,j,k] = ind2sub([obj.nsx, obj.nsy, obj.nsz],(1:obj.nstates));
         obj.etot = (obj.to3d(omx*(i-0.5) + omy*(j-0.5) + omz*(k-0.5)));
         obj.mask = obj.etot <= ecut+0.5;
-%         obj.etot = kron(kron((1:obj.nsx)-0.5,(1:obj.nsy)-0.5),(1:obj.nsz)-0.5)';
-%         [x, wx] = obj.gauss_hermite_wrap(obj.nx);
-%         [y, wy] = obj.gauss_hermite_wrap(obj.ny);
-%         [z, wz] = obj.gauss_hermite_wrap(obj.nz);        
-%         [x,y,z] = meshgrid(x,y,z);
-% %         obj.mesh = struct( 'x', x, 'y', y, 'z', z);
-%         [wx,wy,wz] = meshgrid(wx,wy,wz);
-% %         obj.mesh.wx = wx;
-% %         obj.mesh.wy = wy;
-% %         obj.mesh.wz = wz;
-%         obj.wtot1 = obj.to1d(wx.*wy.*wz);
+ 
     end
   
     function disp( obj )
@@ -112,53 +106,21 @@ classdef ogrid3d < handle
         nn = repmat(nosc,length(grid),1);
         res = obj.osc_state(nosc,grid,om).*(-1i).^nn;
     end    
-    function res = grid2spop(obj,phi)
-        res = obj.grid2sp(phi.*obj.wtot);
-    end
     function res = grid2sp(obj,phi)
-%         res = (phi);
-%         res1 = zeros(obj.nx,obj.nsy,obj.nz,'like',obj.x);
-%         for i=1:obj.nz
-%             res1(:,:,i) = phi(:,:,i)*obj.transy;
-%         end
-%         res1 = permute(res1,[2 1 3]);        
-        res2 = zeros(obj.nsx,obj.nsy,obj.nz,'like',obj.x);
-        for i=1:obj.nz
-            res2(:,:,i) = obj.transx.'*phi(:,:,i)*obj.transy;
-        end        
-        res2 = permute(res2,[1 3 2]);
-        res = zeros(obj.nsx,obj.nsz,obj.nsy,'like',obj.x);
-        for i=1:obj.nsy
-            res(:,:,i) = res2(:,:,i)*obj.transz;
-        end        
-        res = permute(res,[1 3 2]).*obj.mask;
-%         res = obj.to1d(res);
+        res = obj.grid2sp_inner(phi.*obj.wtot);
     end
-%     function res = grid2sp_old(obj,phi)
-%         res = obj.transmat.'*obj.to1d(phi);
-%     end
-%     function res = grid2spop_old(obj,phi)
-%         res = obj.transmat.'*(phi.*obj.wtot);
-%     end
+    function res = grid2sp_inner(obj,phi)
+        res = reshape(permute(phi,[2 3 1]),[obj.ny*obj.nz,obj.nx])*obj.transx;
+        res = reshape(permute(reshape(res,[obj.ny,obj.nz,obj.nsx]),[3 2 1]),[obj.nsx*obj.nz,obj.ny])*obj.transy;        
+        res = reshape(permute(reshape(res,[obj.nsx,obj.nz,obj.nsy]),[1 3 2]),[obj.nsx*obj.nsy,obj.nz])*obj.transz;
+        res = reshape(res,[obj.nsx,obj.nsy,obj.nsz]).*obj.mask;
+    end
+
     function res = sp2grid(obj,phi)
-%         res = (phi);
-        res1 = zeros(obj.nx,obj.ny,obj.nsz,'like',obj.x);
-        for i=1:obj.nsz
-            res1(:,:,i) = obj.transx*phi(:,:,i)*obj.transy.';
-        end
-        res1 = permute(res1,[1 3 2]);        
-%         res2 = zeros(obj.ny,obj.nx,obj.nsz,'like',obj.x);
-%         for i=1:obj.nsz
-%             res2(:,:,i) = res1(:,:,i)*obj.transx.';
-%         end        
-%         res2 = permute(res2,[2 3 1]);
-        res = zeros(obj.nx,obj.nz,obj.ny,'like',obj.x);
-        for i=1:obj.ny
-            res(:,:,i) = res1(:,:,i)*obj.transz.';
-        end        
-        res = permute(res,[1 3 2]);
-%         res = obj.to1d(res);        
-%         res = obj.transmat*phi;
+        res = reshape(permute(phi,[2 3 1]),[obj.nsy*obj.nsz,obj.nsx])*obj.transx.';
+        res = reshape(permute(reshape(res,[obj.nsy,obj.nsz,obj.nx]),[3 2 1]),[obj.nx*obj.nsz,obj.nsy])*obj.transy.';       
+        res = reshape(permute(reshape(res,[obj.nx,obj.nsz,obj.ny]),[1 3 2]),[obj.nx*obj.ny,obj.nsz])*obj.transz.';
+        res = reshape(res,[obj.nx,obj.ny,obj.nz]);
     end
     function res = sp2grid_arb(obj,phi,x,y,z)
         dim = [length(x) length(y) length(z)];
@@ -166,9 +128,6 @@ classdef ogrid3d < handle
         for k = 1:obj.nsz
             for j = 1:obj.nsy
                 for i = 1:obj.nsx
-%                     tmp = obj.osc_state(i-1,x,obj.omx)*obj.osc_state(j-1,y,obj.omy).';
-%                     tmp2 = reshape(tmp,[],1);
-%                     tmp3 = tmp2*obj.osc_state(k-1,z,obj.omz).';
                     res = res + phi(i,j,k)*reshape(reshape(obj.osc_state(i-1,x,obj.omx)*obj.osc_state(j-1,y,obj.omy).',[],1)*obj.osc_state(k-1,z,obj.omz).',dim);
                 end
             end
