@@ -3,6 +3,7 @@ classdef SGPEtask < GPEtask
     
     properties
         T=0               % temperature
+        ecut=0            % cut-off energy
     end
     
     methods

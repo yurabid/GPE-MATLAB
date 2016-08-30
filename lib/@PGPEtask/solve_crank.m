@@ -13,7 +13,6 @@ function phi = solve_crank(task,ddt,niter_inner,niter_outer)
 task.dispstat('','init');
 
 grid = task.grid;
-% VV = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
 if(task.Ntotal > 0)
@@ -29,7 +28,6 @@ tau = task.decay_rate;
 start = task.current_iter;
 
 dt = ddt*1i/(1+1i*gam);
-% ekk = exp(-grid.kk*dt);
 
 if(start>0)
     phi = task.current_state;
@@ -37,7 +35,6 @@ else
     phi = task.init_state;
 end
 
-% tmp2 = real(phi.*conj(phi));
 phir = grid.sp2grid(phi);
 mu = real(grid.inner(phi,task.applyham(phi,0,phir)))./NN0;
 dt_outer = ddt*niter_inner;
@@ -72,7 +69,7 @@ for j=start+1:niter_outer
             
             ncur = grid.integrate(tmp2);
             phi = phi*sqrt(NNN/ncur);
-%             tmp2 = tmp2*(NNN/ncur);
+            phir = phir*sqrt(NNN/ncur);
             mu = real(grid.inner(phi,task.applyham(phi,time2,phir)))/NNN;
 
         else
@@ -80,9 +77,7 @@ for j=start+1:niter_outer
             mu = real(grid.inner(phi,task.applyham(phi,time2,phir)))/NNN;
         end
     end
-%     phir=grid.sp2grid(phi)
     task.ext_callback(phi,j,time2,mu,ncur);
-    imagesc(grid.x,grid.y,angle(phir(:,:,end/2)));drawnow;
 end
 
 end

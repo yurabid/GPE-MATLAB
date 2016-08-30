@@ -13,7 +13,6 @@ function phi = solve_split(task,ddt,niter_inner,niter_outer)
 task.dispstat('','init');
 
 grid = task.grid;
-% VV = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
 if(task.Ntotal > 0)
@@ -39,7 +38,6 @@ else
     phi = task.init_state;
 end
 
-% tmp2 = real(phi.*conj(phi));
 mu = real(grid.inner(phi,task.applyham(phi)))./NN0;
 dt_outer = ddt*niter_inner;
 % main BIG cycle starts here

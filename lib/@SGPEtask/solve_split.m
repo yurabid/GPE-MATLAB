@@ -36,8 +36,12 @@ end
 
 tmp2 = real(phi.*conj(phi));
 mu = real(grid.inner(task.init_state,task.applyham(task.init_state)))./NN0;
-mask = grid.kk < 2*task.T;
-ekk = exp(-grid.kk*dt).*mask; % mask in fourier space implements cut-off of high-energy modes 
+if(task.ecut>0 && task.T>0)
+    mask = grid.kk < task.ecut;
+    ekk = exp(-grid.kk*dt).*mask; % mask in fourier space implements cut-off of high-energy modes 
+else
+    ekk = exp(-grid.kk*dt);
+end
 dt_outer = ddt*niter_inner;
 sz = size(grid.mesh.x);
 variance = sqrt(task.T*gam*ddt/grid.weight);
@@ -50,6 +54,7 @@ for j=start+1:niter_outer
         phi = exp((mu - VV - g*tmp2)*dt/2).*phi;
         % main SMALL cycle starts here
         for i=1:n_rec
+%             phis = grid.fft(phi) + sqrt(grid.nx*grid.ny*grid.nz)*variance*(randn(sz,'like',grid.mesh.x) + 1i*randn(sz,'like',grid.mesh.x)).*mask;
             phi = phi + variance*(randn(sz,'like',grid.mesh.x) + 1i*randn(sz,'like',grid.mesh.x));
             phi = grid.ifft(ekk.*grid.fft(phi));
             if(omega ~= 0)

@@ -1,5 +1,5 @@
 function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
-% groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
+% groundstate_itp - Calculate the Hartree-Fock stationary state with split step Imaginary Time Propagation method.
 %
 %  Usage :
 %    phi = task.groundstate_itp(dt,eps)
@@ -15,19 +15,32 @@ function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
 %    mu       :  array of chemical potential values from norm decrease
 %    mu2      :  array of chemical potential from integral evaluation
 
+TT = task.T;
+
 grid = task.grid;
 V = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
 n_cn=task.n_crank;
-TT = task.T;
+
 if(task.Ntotal > 0)
     NN0 = task.Ntotal;
 else
     NN0 = 1;
 end
 if(nargin <= 3)
-    phi = sqrt(NN0)*grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(size(grid.mesh.x),'like',grid.mesh.x));
+    phi0 = 'rand';
+end
+if(isa(phi0,'char'))
+    if(task.Ntotal > 0)
+        if(strcmp(phi0,'tf'))
+            phi = task.groundstate_tf(eps,1); % Thomas-Fermi initial guess
+        else
+            phi = sqrt(NN0)*grid.normalize(rand(size(grid.mesh.x),'like',V) + 1i*rand(size(grid.mesh.x),'like',V)); % random initial guess
+        end
+    else
+        phi = real(sqrt(complex(task.mu_init - V)/g)); % use only Thomas-Fermi approximation as initial guess if mu_init is set
+    end   
 else
     phi = sqrt(NN0)*grid.normalize(phi0);
 end

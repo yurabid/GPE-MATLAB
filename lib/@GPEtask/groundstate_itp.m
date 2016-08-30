@@ -26,10 +26,22 @@ else
     nnn = 1;
 end
 if(nargin <= 3)
-    phi = sqrt(nnn)*grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(size(grid.mesh.x),'like',grid.mesh.x));
+    phi0 = 'rand';
+end
+if(isa(phi0,'char'))
+    if(task.Ntotal > 0)
+        if(strcmp(phi0,'tf'))
+            [phi,~] = task.groundstate_tf(eps); % Thomas-Fermi initial guess
+        else
+            phi = sqrt(nnn)*grid.normalize(rand(size(grid.mesh.x),'like',V) + 1i*rand(size(grid.mesh.x),'like',V)); % random initial guess
+        end
+    else
+        phi = real(sqrt(complex(task.mu_init - V)/g)); % use only Thomas-Fermi approximation as initial guess if mu_init is set
+    end   
 else
     phi = sqrt(nnn)*grid.normalize(phi0);
 end
+
 ekk = exp(-grid.kk*dt);
 MU = zeros(1000,1,'like',grid.mesh.x);
 MU2 = zeros(1000,1,'like',grid.mesh.x);
