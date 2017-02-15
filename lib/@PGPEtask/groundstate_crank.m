@@ -22,13 +22,13 @@ g = task.g*task.Ntotal;
 omega = task.omega;
 n_cn=task.n_crank;
 if(nargin <= 3)
-    phi = grid.normalize(rand([grid.nsx, grid.nsy, grid.nsz],'like',grid.mesh.x) + 1i*rand([grid.nsx, grid.nsy, grid.nsz],'like',grid.mesh.x));
+    phi = grid.normalize(rand(size(grid.etot),'like',V) + 1i*rand(size(grid.etot),'like',V));
 else
     phi = grid.normalize(phi0);
 end
 
-MU = zeros(1000,1,'like',grid.mesh.x);
-MU2 = zeros(1000,1,'like',grid.mesh.x);
+MU = zeros(1000,1,'like',V);
+MU2 = zeros(1000,1,'like',V);
 delta = 1;
 mu_old = 0;
 i = 1;

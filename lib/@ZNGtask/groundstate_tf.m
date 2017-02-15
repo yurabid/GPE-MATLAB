@@ -61,3 +61,5 @@ end
 
 task.init_state = phi;
 task.init_state_nt = nt;
+task.current_mu = MU(end);
+task.current_n = task.Ntotal;

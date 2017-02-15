@@ -27,18 +27,18 @@ classdef GPEtask < handle
     methods
         function obj = GPEtask(grid,trappot)
             obj.grid = grid;
-            obj.init_state = zeros(size(grid.mesh.x),'like',grid.mesh.x);
-            if(isa(trappot,'double'))
-                obj.Vtrap = trappot;
-            elseif(isa(trappot,'function_handle'))
+            obj.init_state = zeros(size(grid.mesh.x),'like',grid.x);
+            if(isa(trappot,'function_handle'))
                 obj.Vtrap = trappot(grid.mesh.x,grid.mesh.y,grid.mesh.z);
+            else
+                obj.Vtrap = trappot;
             end
             rng('shuffle');
             if(isa(grid.mesh.x,'gpuArray'))
                 parallel.gpu.rng('shuffle');
             end
             obj.dispstat('','init');
-            obj.history = struct('mu',zeros(1,0,'like',grid.mesh.x),'n',zeros(1,0,'like',grid.mesh.x));
+            obj.history = struct('mu',zeros(1,0,'like',grid.x),'n',zeros(1,0,'like',grid.x));
         end
         
         function v = getVtotal(obj,time)

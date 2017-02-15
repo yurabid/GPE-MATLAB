@@ -125,6 +125,8 @@ if(nargout >= 2)
     MU = real(MU(1:nnz(MU)));
     if(task.Ntotal > 0)
         MU = 1/dt * log(MU);
+        task.current_mu = MU(end);
+        task.current_n = task.Ntotal;
     end
     varargout{1} = MU;
 end
@@ -135,4 +137,5 @@ end
 
 task.init_state = phi;
 task.init_state_nt = nt;
+
 end

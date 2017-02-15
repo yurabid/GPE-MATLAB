@@ -26,7 +26,7 @@ classdef grid3dgpu < handle
       %  Input
       %    x,    y,    z      :  arrays with grid points
       %    xmax, ymax, zmax   :  largest  grid points (smallest points are symmetric)
-      %    nx,   ny,   nz     :  number of point in each dimension
+      %    nx,   ny,   nz     :  number of points in each dimension
       %  initialization
       obj = init( obj, varargin{ : } );
     end
