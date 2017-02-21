@@ -8,4 +8,4 @@ function int = integrate( obj, fun )
 %  Output
 %    int    :  integrated function
 
-int = sum(sum(sum( fun ) ) ) * obj.weight;
+int = sum(fun(:)) * obj.weight;
