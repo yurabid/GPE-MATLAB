@@ -7,3 +7,8 @@ a0=5.2917721067e-11; % Bohr radius
 aRB = 5.77e-9; % scattering length of rhubidium-87
 aNA = 2.75e-9; % scattering length of sodium-23
 
+% Hyperfine rhubidium states PRA 87, 053614 (2013)
+aRB11 = 100.4*a0;
+aRB22 = 95.44*a0;
+aRB12 = 98.006*a0;
+

@@ -46,8 +46,8 @@ for j=start+1:niter_outer
     for jj=1:niter_inner/n_rec
         
         time2=time+(jj-1)*ddt*n_rec;
-        VV = task.getVtotal(time2);
-        phi = exp((mu - VV - g*tmp2)*dt/2).*phi;
+        VV = task.getVtotal(time2)-mu;
+        phi = exp(( - VV - g*tmp2)*dt*0.5).*phi;
         % main SMALL cycle starts here
         for i=1:n_rec
             phi = grid.ifft(ekk.*grid.fft(phi));
@@ -60,10 +60,10 @@ for j=start+1:niter_outer
                 phi = phi + dt*omega*grid.lz(lphi);
             end
             
-            phi = exp((mu - VV - g*phi.*conj(phi))*dt).*phi;
+            phi = exp(( - VV - g*phi.*conj(phi))*dt).*phi;
         end
         
-        phi = exp((VV - mu + g*phi.*conj(phi))*dt/2).*phi;
+        phi = exp((VV + g*phi.*conj(phi))*dt*0.5).*phi;
         tmp2 = real(phi.*conj(phi));
         
         if(gam>0)
