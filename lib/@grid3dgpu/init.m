@@ -27,11 +27,11 @@ dz = z( 2 ) - z( 1 );
 [ obj.x, obj.y, obj.z ] = deal( x, y, z );
 
 %%  wavevectors and operators in reciprocal space
-kx = gpuArray([ (0:nx/2) -(nx/2-1:-1:1)]*pi/x(end));
-ky = gpuArray([ (0:ny/2) -(ny/2-1:-1:1)]*pi/y(end));
-kz = gpuArray([ (0:nz/2) -(nz/2-1:-1:1)]*pi/z(end));
+obj.kx = gpuArray([ (0:nx/2) -(nx/2-1:-1:1)]*pi/x(end));
+obj.ky = gpuArray([ (0:ny/2) -(ny/2-1:-1:1)]*pi/y(end));
+obj.kz = gpuArray([ (0:nz/2) -(nz/2-1:-1:1)]*pi/z(end));
 
-[ kx, ky, kz ] = meshgrid( kx, ky, kz );
+[ kx, ky, kz ] = meshgrid( obj.kx, obj.ky, obj.kz );
 obj.kk = (kx.^2+ky.^2+kz.^2)/2;
 
 %%  meshgrid coordinates
@@ -42,3 +42,4 @@ obj.kk = (kx.^2+ky.^2+kz.^2)/2;
 obj.mesh = struct( 'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2 );
 
 obj.weight = dx*dy*dz;
+obj.kweight = obj.weight/(nx*ny*nz);

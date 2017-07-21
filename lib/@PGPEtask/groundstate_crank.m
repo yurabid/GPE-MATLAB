@@ -22,7 +22,7 @@ g = task.g*task.Ntotal;
 omega = task.omega;
 n_cn=task.n_crank;
 if(nargin <= 3)
-    phi = grid.normalize(rand(size(grid.etot),'like',V) + 1i*rand(size(grid.etot),'like',V));
+    phi = grid.normalize(rand(size(grid.etot),'like',V).*grid.mask + 1i*rand(size(grid.etot),'like',V).*grid.mask);
 else
     phi = grid.normalize(phi0);
 end
@@ -44,7 +44,7 @@ while delta > eps
     end
     phi = phi - dt*(grid.etot.*lphi + grid.grid2sp((V+g*abs(lphir.^2)).*lphir));
 
-    mu = sqrt(1.0/sum(abs(grid.to1d(phi.^2))));
+    mu = sqrt(1.0/sum(abs(grid.to1d(phi)).^2));
     phi=phi*mu;
 	phir = grid.sp2grid(phi);
 

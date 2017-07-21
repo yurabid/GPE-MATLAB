@@ -22,6 +22,9 @@ classdef GPEtask < handle
         current_n          % current number of particles
         history            % history of current values
         user_callback      % user-defined callback function to process data after each step
+        % real time propagation properties
+        dt                 % time step for history arrays
+        totalTime          % total evolution time
     end
     
     methods
@@ -76,7 +79,7 @@ classdef GPEtask < handle
       
       dispstat(obj,TXT,varargin);
       
-        function ext_callback(obj,phi,step,time,mu,n)
+        function res=ext_callback(obj,phi,step,time,mu,n)
             if(exist('snapshots','file') ~= 7)
                 mkdir('snapshots');
             end
@@ -99,6 +102,7 @@ classdef GPEtask < handle
             end
             ttime = toc;
             obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
+            res = res_text;
         end
     end
     

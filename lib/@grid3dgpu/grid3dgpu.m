@@ -9,7 +9,11 @@ classdef grid3dgpu < handle
     x           %  positions of grid along x
     y           %  positions of grid along y
     z           %  positions of grid along z
+    kx          %  momentum grid along x
+    ky          %  momentum grid along y
+    kz          %  momentum grid along z    
     weight      %  integration weight
+    kweight     %  integration weight in fourier space
     kk          %  Laplace operator in Fourier space
     mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
   end

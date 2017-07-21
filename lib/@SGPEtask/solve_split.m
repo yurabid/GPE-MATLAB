@@ -74,5 +74,8 @@ for j=start+1:niter_outer
                
         ncur = grid.integrate(tmp2);
     end
-    task.ext_callback(phi,j,time2,mu,ncur); 
+    err=task.ext_callback(phi,j,time2,mu,ncur);
+    if(strcmp(err,'TERM'))
+        break;
+    end
 end

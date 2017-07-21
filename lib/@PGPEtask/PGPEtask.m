@@ -3,6 +3,10 @@ classdef PGPEtask < GPEtask
     
     properties
         T=0               % temperature
+        snapshots={}      % snapshots for density matrix
+        ss_maxlength=100  % maximal number of snapshots
+        current_nc = 0
+        current_c = 0
     end
     
     methods
@@ -33,9 +37,13 @@ classdef PGPEtask < GPEtask
   methods (Access = protected) 
       
      
-        function ext_callback(obj,phi,step,time,mu,n)
+        function res=ext_callback(obj,phi,step,time,mu,n)
             if(exist('snapshots','file') ~= 7)
                 mkdir('snapshots');
+            end
+            obj.snapshots{length(obj.snapshots)+1} = phi(obj.grid.mask);
+            if(length(obj.snapshots)>obj.ss_maxlength)
+                obj.snapshots = obj.snapshots(2:end);
             end
             obj.current_state = phi;
             obj.current_time = time;
@@ -44,6 +52,7 @@ classdef PGPEtask < GPEtask
             obj.history.mu(step) = mu;
             obj.current_n = n;
             obj.history.n(step) = n;
+            obj.history.nc(step) = obj.current_nc;
             res_text='';
 
             if(isa(obj.user_callback,'function_handle'))
@@ -56,8 +65,7 @@ classdef PGPEtask < GPEtask
             end
             ttime = toc;
             obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
-            phir = obj.grid.sp2grid(phi);
-            imagesc(obj.grid.y,obj.grid.x,squeeze(abs(phir(:,:,end/2))));drawnow;
+            res = res_text;
         end
     end
     

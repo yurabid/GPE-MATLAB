@@ -1,4 +1,4 @@
-function [y, errors] = polylog(n,z) 
+function [y, errors] = polylog_as(n,z) 
 %% polylog - Computes the n-based polylogarithm of z: Li_n(z)
 % Approximate closed form expressions for the Polylogarithm aka de 
 % Jonquiere's function are used. Computes reasonably faster than direct

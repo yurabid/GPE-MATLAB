@@ -36,7 +36,10 @@ else
 end
 
 phir = grid.sp2grid(phi);
-mu = real(grid.inner(phi,task.applyham(phi,0,phir)))./NN0;
+variance = sqrt(task.T*gam*ddt);
+sz = size(phi);
+% mu = real(grid.inner(phi,task.applyham(phi,0,phir)))./NN0;
+mu = task.mu_init;
 dt_outer = ddt*niter_inner;
 % main BIG cycle starts here
 for j=start+1:niter_outer
@@ -51,31 +54,32 @@ for j=start+1:niter_outer
 
             lphi = phi;
             lphir = phir;
+            noise = variance*(randn(sz,'like',VV) + 1i*randn(sz,'like',VV));
             for ii = 1:n_cn        
-                lphi = phi - dt*(grid.etot.*lphi + grid.grid2spop((VV-mu+g*abs(lphir.^2)).*lphir));
+                lphi = phi - dt*(grid.etot.*lphi + grid.grid2sp((VV-mu+g*abs(lphir.^2)).*lphir));
                 lphi = 0.5*(phi+lphi);
                 lphir = grid.sp2grid(lphi);
             end
-            phi = phi - dt*(grid.etot.*lphi + grid.grid2spop((VV-mu+g*abs(lphir.^2)).*lphir));
+            phi = (phi - dt*(grid.etot.*lphi + grid.grid2sp((VV-mu+g*abs(lphir.^2)).*lphir)) - noise).*grid.mask;
             phir = grid.sp2grid(phi);
         end
         
         tmp2 = real(phi.*conj(phi));
         
-        if(gam>0)
-            if(tau >0)
-                NNN = NN0*exp(-time2/tau);
-            end
-            
+%         if(gam>0)
+%             if(tau >0)
+%                 NNN = NN0*exp(-time2/tau);
+%             end
+%             
+%             ncur = grid.integrate(tmp2);
+%             phi = phi*sqrt(NNN/ncur);
+%             phir = phir*sqrt(NNN/ncur);
+%             mu = real(grid.inner(phi,task.applyham(phi,time2,phir)))/NNN;
+% 
+%         else
             ncur = grid.integrate(tmp2);
-            phi = phi*sqrt(NNN/ncur);
-            phir = phir*sqrt(NNN/ncur);
-            mu = real(grid.inner(phi,task.applyham(phi,time2,phir)))/NNN;
-
-        else
-            ncur = grid.integrate(tmp2);
-            mu = real(grid.inner(phi,task.applyham(phi,time2,phir)))/NNN;
-        end
+%             mu = real(grid.inner(phi,task.applyham(phi,time2,phir)))/NNN;
+%         end
     end
     task.ext_callback(phi,j,time2,mu,ncur);
 end

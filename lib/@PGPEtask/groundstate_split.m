@@ -46,7 +46,7 @@ while delta > eps
     
     phi=phi*mu;
     phir = grid.sp2grid(phi);
-    
+
     if(nargout >= 3)
         MU2(i) = real(sum(grid.to1d(grid.etot.*abs(phi).^2 + conj(phi).*(grid.grid2sp((V+g*abs(phir.^2)).*phir)))));
     end

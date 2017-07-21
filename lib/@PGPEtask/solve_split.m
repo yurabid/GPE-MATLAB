@@ -28,17 +28,19 @@ tau = task.decay_rate;
 start = task.current_iter;
 
 dt = ddt*1i/(1+1i*gam);
-ekk = exp(-grid.etot*dt);
-ekkp = exp(-grid.etot*dt*0.5);
-ekkm = exp(grid.etot*dt*0.5);
+ekk = exp(-grid.etot*dt).*grid.mask;
+ekkp = exp(-grid.etot*dt*0.5).*grid.mask;
+ekkm = exp(grid.etot*dt*0.5).*grid.mask;
 
 if(start>0)
     phi = task.current_state;
 else
     phi = task.init_state;
 end
-
-mu = real(grid.inner(phi,task.applyham(phi)))./NN0;
+variance = sqrt(task.T*gam*ddt);
+sz = size(phi);
+% mu = real(grid.inner(phi,task.applyham(phi)))./NN0;
+mu = task.mu_init;
 dt_outer = ddt*niter_inner;
 % main BIG cycle starts here
 for j=start+1:niter_outer
@@ -52,25 +54,28 @@ for j=start+1:niter_outer
         for i=1:n_rec
             phir = grid.sp2grid(phi);
             phir = exp(-(VV-mu+g*abs(phir.^2))*dt).*phir;
-            phi = grid.grid2sp(phir);
+            phi = grid.grid2sp(phir) + variance*(randn(sz,'like',VV) + 1i*randn(sz,'like',VV));
             phi = ekk.*phi;
         end
         phi = ekkm.*phi;
         
-        if(gam>0)
-            if(tau >0)
-                NNN = NN0*exp(-time2/tau);
-            end
-            
+%         if(gam>0)
+%             if(tau >0)
+%                 NNN = NN0*exp(-time2/tau);
+%             end
+%             
+%             ncur = grid.integrate(real(phi.*conj(phi)));
+%             phi = phi*sqrt(NNN/ncur);
+%             mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
+%             
+%         else
             ncur = grid.integrate(real(phi.*conj(phi)));
-            phi = phi*sqrt(NNN/ncur);
-            mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
-            
-        else
-            ncur = grid.integrate(real(phi.*conj(phi)));
-            mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
-        end
+%             mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
+%         end
     end
-    task.ext_callback(phi,j,time2,mu,ncur);
+    err=task.ext_callback(phi,j,time2,mu,ncur);
+    if(strcmp(err,'TERM'))
+        break;
+    end
 end
 

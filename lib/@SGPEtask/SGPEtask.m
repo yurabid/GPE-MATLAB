@@ -3,6 +3,8 @@ classdef SGPEtask < GPEtask
     
     properties
         T=0               % temperature
+        snapshots={}      % snapshots for density matrix
+        ss_maxlength=100  % maximal number of snapshots        
         ecut=0            % cut-off energy
     end
     
@@ -15,7 +17,7 @@ classdef SGPEtask < GPEtask
   methods (Access = protected) 
       
      
-        function ext_callback(obj,phi,step,time,mu,n)
+        function res=ext_callback(obj,phi,step,time,mu,n)
             if(exist('snapshots','file') ~= 7)
                 mkdir('snapshots');
             end
@@ -38,6 +40,7 @@ classdef SGPEtask < GPEtask
             end
             ttime = toc;
             obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
+            res = res_text;
         end
     end
     
