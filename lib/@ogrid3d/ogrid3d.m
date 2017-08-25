@@ -61,9 +61,13 @@ classdef ogrid3d < handle
         [obj.y, obj.wy] = obj.gauss_hermite_wrap(obj.ny,grid_factor*omy);
         [obj.z, obj.wz] = obj.gauss_hermite_wrap(obj.nz,grid_factor*omz);
         
-        obj.transx = obj.trans1(obj.x,obj.nsx,obj.omx);
-        obj.transy = obj.trans1(obj.y,obj.nsy,obj.omy);
-        obj.transz = obj.trans1(obj.z,obj.nsz,obj.omz);
+%         obj.wx = obj.wx.*(obj.wx>1e-30);
+%         obj.wy = obj.wy.*(obj.wy>1e-30);
+%         obj.wz = obj.wz.*(obj.wz>1e-30);
+        
+        obj.transx = obj.trans2(obj.x,obj.nsx,obj.omx);
+        obj.transy = obj.trans2(obj.y,obj.nsy,obj.omy);
+        obj.transz = obj.trans2(obj.z,obj.nsz,obj.omz);
         
 		obj.nstates = obj.nsx*obj.nsy*obj.nsz;
         obj.npoints = obj.nx*obj.ny*obj.nz;
@@ -73,7 +77,7 @@ classdef ogrid3d < handle
         obj.mesh = struct( 'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2);
         [wy,wx,wz] = meshgrid(obj.wy,obj.wx,obj.wz);
 
-        obj.wtot = (wx.*wy.*wz.*exp(grid_factor*(omx*x.^2+omy*y.^2+omz*z.^2)));
+        obj.wtot = wx.*wy.*wz; %.*exp(grid_factor*(omx*x.^2+omy*y.^2+omz*z.^2));
         [i,j,k] = ind2sub([obj.nsx, obj.nsy, obj.nsz],(1:obj.nstates));
         obj.etot = (obj.to3d(omx*(i-0.5) + omy*(j-0.5) + omz*(k-0.5)));
         obj.mask = obj.etot <= ecut+0.5;
@@ -97,10 +101,28 @@ classdef ogrid3d < handle
 		u = hermite(n,x.*sqrt(om),'norm').*exp(-om*xgrid.^2*0.5)*om^0.25; %./sqrt(2^n*factorial(n)*sqrt(pi/om));
     end
     
+	function u=osc_state2(obj,n,x,om)
+        if(n<2)
+            u = obj.osc_state(n,x,om);
+        else
+            u = sqrt(2*om./n).*x(:).*obj.osc_state2(n-1,x,om) - sqrt((n-1)/n).*obj.osc_state2(n-2,x,om);
+        end
+    end
+    
     function res = trans1(obj,grid,n,om)
         nosc = [0:n-1];
         res = obj.osc_state(nosc,grid,om);
     end
+    function res = trans2(obj,x,n,om)
+%         nosc = [0:n-1];
+%         res = obj.osc_state(nosc,grid,om);
+        res = zeros(length(x),n);
+        res(:,1) = obj.osc_state(0,x,om);
+        res(:,2) = obj.osc_state(1,x,om);
+        for i=2:n-1
+            res(:,i+1) = sqrt(2*om./i).*x(:).*res(:,i) - sqrt((i-1)/i).*res(:,i-1);
+        end
+    end    
     function res = trans1mom(obj,grid,n,om)
         nosc = [0:n-1];
         nn = repmat(nosc,length(grid),1);

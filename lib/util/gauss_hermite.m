@@ -230,7 +230,7 @@ end
 %w_i = 1/n(H_{n-1}(x_i))^2
 
 htable = zeros(nmax,length(x));
-htable(1,:) = ones(size(x))/pi^(1/4);
+htable(1,:) = ones(size(x))/pi^(1/4).*exp(-x.^2/2);
 htable(2,:) = x.*htable(1,:)*sqrt(2);
 
 for k = 2:nmax-1 %up to n-1th

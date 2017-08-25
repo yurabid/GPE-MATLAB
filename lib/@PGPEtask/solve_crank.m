@@ -56,11 +56,11 @@ for j=start+1:niter_outer
             lphir = phir;
             noise = variance*(randn(sz,'like',VV) + 1i*randn(sz,'like',VV));
             for ii = 1:n_cn        
-                lphi = phi - dt*(grid.etot.*lphi + grid.grid2sp((VV-mu+g*abs(lphir.^2)).*lphir));
+                lphi = phi - dt*((grid.etot-mu).*lphi + grid.grid2sp((VV+g*abs(lphir.^2)).*lphir));
                 lphi = 0.5*(phi+lphi);
                 lphir = grid.sp2grid(lphi);
             end
-            phi = (phi - dt*(grid.etot.*lphi + grid.grid2sp((VV-mu+g*abs(lphir.^2)).*lphir)) - noise).*grid.mask;
+            phi = (phi - dt*((grid.etot-mu).*lphi + grid.grid2sp((VV+g*abs(lphir.^2)).*lphir)) - noise).*grid.mask;
             phir = grid.sp2grid(phi);
         end
         

@@ -32,6 +32,7 @@ end
 
 if(task.mu_init > 0)
     phi = real(sqrt(complex(task.mu_init - V)/task.g));
+	mu = task.mu_init;
 else
     grid2 = grid3d(grid.x(end),128,grid.y(end),128,grid.z(end),128);
     V2 = 0.5*(grid.omx^2*grid2.mesh.x.^2+grid.omy^2*grid2.mesh.y.^2+grid.omz^2*grid2.mesh.z.^2);

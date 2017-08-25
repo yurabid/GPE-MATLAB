@@ -15,6 +15,6 @@ tmp = ones(size(z),'like',z);
 
 for i=1:nsum
     tmp=tmp.*z; 
-    y = y + tmp./i.^n*gammainc(x.*i,n,'upper');
+    y = y + tmp./i.^n.*gammainc(x.*i,n,'upper');
 end
 
