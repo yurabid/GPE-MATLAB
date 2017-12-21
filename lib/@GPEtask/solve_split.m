@@ -11,7 +11,7 @@ function phi = solve_split(task,ddt,niter_inner,niter_outer)
 %    phi       :  final state
 
 task.dispstat('','init');
-
+tic;
 grid = task.grid;
 % VV = task.getVtotal(0);
 g = task.g;

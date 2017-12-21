@@ -25,6 +25,7 @@ classdef GPEtask < handle
         % real time propagation properties
         dt                 % time step for history arrays
         totalTime          % total evolution time
+        show_image = 0     % show density image on each time step
     end
     
     methods
@@ -99,6 +100,9 @@ classdef GPEtask < handle
                     res_text='';
                     obj.user_callback(obj);
                 end
+            end
+            if(obj.show_image>0)
+                hold off; obj.grid.imagesc(abs(phi)); drawnow;
             end
             ttime = toc;
             obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));

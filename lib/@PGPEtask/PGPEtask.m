@@ -52,7 +52,7 @@ classdef PGPEtask < GPEtask
             obj.history.mu(step) = mu;
             obj.current_n = n;
             obj.history.n(step) = n;
-            obj.history.nc(step) = obj.current_nc;
+%             obj.history.nc(step) = obj.current_nc;
             res_text='';
 
             if(isa(obj.user_callback,'function_handle'))

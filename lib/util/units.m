@@ -4,7 +4,7 @@ amu = 1.660539040e-27; % atomic mass unit
 mRB=86.909180527*amu; % mass of rhubidium-87 atom
 mNA=22.9897692809*amu; % mass of sodium-23 atom
 a0=5.2917721067e-11; % Bohr radius
-aRB = 5.77e-9; % scattering length of rhubidium-87
+aRB = 100.87*a0; %5.77e-9; % scattering length of rhubidium-87
 aNA = 2.75e-9; % scattering length of sodium-23
 
 % Hyperfine rhubidium-87 states PRA 87, 053614 (2013)
