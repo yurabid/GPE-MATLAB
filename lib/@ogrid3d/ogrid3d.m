@@ -74,8 +74,8 @@ classdef ogrid3d < handle
 
         [y,x,z] = meshgrid(obj.y,obj.x,obj.z);
         [y2, x2] = meshgrid(obj.y, obj.x);
-        obj.mesh = struct( 'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2);
         [wy,wx,wz] = meshgrid(obj.wy,obj.wx,obj.wz);
+        obj.mesh = struct( 'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2, 'wx', wx, 'wy', wy, 'wz', wz);
 
         obj.wtot = wx.*wy.*wz; %.*exp(grid_factor*(omx*x.^2+omy*y.^2+omz*z.^2));
         [i,j,k] = ind2sub([obj.nsx, obj.nsy, obj.nsz],(1:obj.nstates));
@@ -175,6 +175,9 @@ classdef ogrid3d < handle
     end
     function res=integrate(obj,phi)
         res = sum(obj.to1d(phi));
+    end
+    function res=integrate_grid(obj,phi)
+        res = sum(obj.to1d(phi.*obj.wtot));
     end
   end
   

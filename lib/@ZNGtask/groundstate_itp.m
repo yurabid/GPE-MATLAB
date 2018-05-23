@@ -55,7 +55,7 @@ mu_old = 0;
 i = 1;
 
 tmp2 = real(phi.*conj(phi))*g+V;
-while delta > eps
+while (delta > eps || mod(i,10)~=5)
     phi = exp(-tmp2*dt*0.5).*phi;
     phi = grid.ifft(ekk.*grid.fft(phi));
         if(omega ~= 0)
@@ -120,7 +120,7 @@ while delta > eps
         break;
     end
 end
-
+i=i-1;
 if(nargout >= 2)
     MU = real(MU(1:nnz(MU)));
     if(task.Ntotal > 0)
@@ -132,7 +132,8 @@ if(nargout >= 2)
 end
 if(nargout >= 3)
     MU2 = real(MU2(1:nnz(MU2)));
-    varargout{2} = MU2;
+    MUEX = MU2(i) - (MU2(i)-MU2(i-1))^2/(MU2(i)-2*MU2(i-1)+MU2(i-2)); % exponential extrapolation
+    varargout{2} = [MU2;MUEX];
 end
 
 task.init_state = phi;
