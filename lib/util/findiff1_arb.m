@@ -32,6 +32,10 @@ for i=3:Ntot+2
     if(is_periodic ==0)
         tmp = zeros(1,Ntot+4);
         tmp(i+ind(:)) = trans;
+		tmp(3) = tmp(3) - tmp(2);
+        tmp(4) = tmp(4) - tmp(1);
+		tmp(Ntot+2) = tmp(Ntot+2) - tmp(Ntot+3);
+        tmp(Ntot+1) = tmp(Ntot+1) - tmp(Ntot+4);
         A(i-2,:) = tmp(3:Ntot+2);
     elseif(is_periodic ==1)
         tmp = zeros(1,Ntot);

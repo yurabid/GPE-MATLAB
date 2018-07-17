@@ -1,4 +1,4 @@
-classdef grid3d
+classdef grid3d < gridBase
   %  Three-dimensional grid for solution of non-linear Schroedinger equation.
   
 %%  Properties
@@ -9,9 +9,9 @@ classdef grid3d
     x           %  positions of grid along x
     y           %  positions of grid along y
     z           %  positions of grid along z
-    weight      %  integration weight
-    kk          %  Laplace operator in Fourier space
-    mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
+%     weight      %  integration weight
+%     kk          %  Laplace operator in Fourier space
+%     mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
   end
   
 %%  Methods

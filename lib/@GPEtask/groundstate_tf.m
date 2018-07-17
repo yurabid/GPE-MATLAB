@@ -30,7 +30,7 @@ if(nargin < 5)
         mur = min([V(1), V(end)]);
     end
 end
-NC = N*task.g/task.grid.weight;
+NC = N*task.g(1)/task.grid.weight;
 mu = (mul+mur)/2;
 while (mur-mul)/mu>eps
     vvv = (mu-V).*(V<mu);
@@ -42,4 +42,4 @@ while (mur-mul)/mu>eps
     end
     mu = (mul+mur)/2;
 end
-phi = sqrt(vvv/task.g);
+phi = sqrt(vvv/task.g(1));

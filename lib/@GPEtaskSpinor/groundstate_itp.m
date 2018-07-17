@@ -16,10 +16,10 @@ function [phi, varargout] = groundstate_itp(task,dt,eps,phi)
 %    mu2      :  array of chemical potential from integral evaluation
 
 grid = task.grid;
-VV = task.getVtotal(0);
-V = VV{1};
 ncomp = size(task.g,1);
 task.ncomp = ncomp;
+VV = task.getVtotal(0);
+V = VV{1};
 coupl = task.coupling;
 g = task.g;
 if(nargin <= 3)
@@ -32,27 +32,31 @@ i = 1;
 
 tmp = cell(1,ncomp);
 tmp2 = cell(1,ncomp);
-tmp3 = cell(1,ncomp);
-cosom = cosh(dt*coupl);
-sinom = sinh(dt*coupl);
+% tmp3 = cell(1,ncomp);
+cang = angle(coupl);
+cosom = cosh(dt*abs(coupl));
+sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
+sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
+
     
 while delta > eps
 
     for j =1:ncomp
         tmp2{j} = VV{j};
         for k = 1:ncomp
-            tmp2{j} = tmp2{j} + g(j,k)*real(phi{k}.*conj(phi{k}));
+            tmp2{j} = tmp2{j} + g(j,k)*abs(phi{k}).^2;%.*conj(phi{k}));
         end
     end     
     for j = 1:ncomp
         phi{j} = grid.ifft(ekk.*grid.fft(phi{j}));
     end
-    for j = 1:ncomp
-        tmp3{j} = exp(-tmp2{j}*dt).*(cosom.*phi{j} - sinom.*phi{3-j});
-    end
+    %for j = 1:ncomp
+        tmp2{1} = exp(-tmp2{1}*dt).*(cosom.*phi{1} - sinomm.*phi{2});
+        tmp2{2} = exp(-tmp2{2}*dt).*(cosom.*phi{2} - sinomp.*phi{1});
+    %end
 
     for j = 1:ncomp
-        phi{j} = grid.ifft(ekk.*grid.fft(tmp3{j}));
+        phi{j} = grid.ifft(ekk.*grid.fft(tmp2{j}));
     end
     
     ntot = 0;
@@ -91,4 +95,5 @@ if(nargout >= 3)
     varargout{2} = mu/task.Ntotal;    
 end
 task.init_state = phi;
+task.current_state = phi;
 end

@@ -1,4 +1,4 @@
-classdef grid3dgpu < handle
+classdef grid3dgpu < gridBase
   %  Three-dimensional grid for solution of non-linear Schroedinger equation.
   
 %%  Properties
@@ -12,10 +12,10 @@ classdef grid3dgpu < handle
     kx          %  momentum grid along x
     ky          %  momentum grid along y
     kz          %  momentum grid along z    
-    weight      %  integration weight
-    kweight     %  integration weight in fourier space
-    kk          %  Laplace operator in Fourier space
-    mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
+%     weight      %  integration weight
+%     kweight     %  integration weight in fourier space
+%     kk          %  Laplace operator in Fourier space
+%     mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
   end
   
 %%  Methods

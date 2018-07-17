@@ -11,9 +11,10 @@ classdef GPEtask < handle
         decay_rate = 0     % 1/e decay time (0 for no decay)
         Ntotal = 0         % initial total number of particles
         mu_init = 0        % initial chemical potential
-        Vtrap              % matrix of the trap potential
+        Vtrap              % matrix of the static trap potential
         Vtd                % function handle to the time-dependent potential
         V0 = 0             % INTERNAL: total potential at t=0  
+        Vcurrent = 0       % matrix of the current total trap potential
         init_state         % initial state
         current_state      % current state in dynamics
         current_time = 0   % current time in dynamics
@@ -74,6 +75,20 @@ classdef GPEtask < handle
                 res = res - obj.omega*obj.grid.lz(phi);
             end
         end
+        
+        function res = get_energy(obj,phi,time)
+            if(nargin<3)
+                time = obj.current_time;
+            end
+            if(nargin<2)
+                phi = obj.current_state;
+            end            
+            tmp = obj.g;
+            obj.g = 0.5*obj.g;
+            res = real(obj.grid.inner(phi,obj.applyham(phi,time)));
+            obj.g=tmp;
+        end
+        
   end
   
   methods (Access = protected) 

@@ -74,7 +74,7 @@ ylim(a2,[ry(1) ry(end)]);
 image(rx,ry,cdata1,'Parent',a1,'CDataMapping','scaled');
 image(rx,ry,cdata2,'Parent',a2,'CDataMapping','scaled');
 
-colorbar(a1,'Position',[bbox(1)+bbwidth*0.435 bbox(2)+bbheight*0.15 bbwidth*0.02 bbheight*0.72], 'LineWidth', 1, opts{:});
-colorbar(a2,'Position',[bbox(1)+bbwidth*0.925 bbox(2)+bbheight*0.15 bbwidth*0.02 bbheight*0.72], 'LineWidth', 1, opts{:});
+%colorbar(a1,'Position',[bbox(1)+bbwidth*0.435 bbox(2)+bbheight*0.15 bbwidth*0.02 bbheight*0.72], 'LineWidth', 1, opts{:});
+%colorbar(a2,'Position',[bbox(1)+bbwidth*0.925 bbox(2)+bbheight*0.15 bbwidth*0.02 bbheight*0.72], 'LineWidth', 1, opts{:});
 
 end
