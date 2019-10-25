@@ -3,6 +3,7 @@ classdef GPEtaskSpinor < GPEtask
     
     properties
 		coupling=0        % Inter-component coupling (Rabi frequency)
+        nlincpl=0
         ncomp=0           % Number of components      
     end
     
@@ -58,11 +59,13 @@ classdef GPEtaskSpinor < GPEtask
                 res = res + obj.g(j,k)*abs(phi{k}).^2;
             end
             res = res.*phi{j} + obj.grid.lap(phi{j});
-            for k=1:obj.ncomp
-                if(j~=k)
-                    res = res + obj.coupling.*phi{k};
+%             for k=1:obj.ncomp
+                if(j==1)
+                    res = res + obj.coupling.*phi{2};
+                else
+                    res = res + conj(obj.coupling).*phi{1};
                 end
-            end
+%             end
             if(obj.omega ~= 0)
                 res = res - obj.omega*obj.grid.lz(phi{j});
             end            
@@ -83,6 +86,12 @@ classdef GPEtaskSpinor < GPEtask
             for j =1:obj.ncomp
                 res = res + obj.grid.inner(left{j},right{j});
             end
+        end
+        
+        function res = mul(~,phi,a)
+            res = phi;
+            res{1} = res{1}*a;
+            res{2} = res{2}*a;
         end
         
         function res = get_energy(obj,phi,time)

@@ -7,7 +7,8 @@ classdef gridBase < handle
     weight      %  integration weight
     kweight     %  integration weight in fourier space
     kk          %  Laplace operator in Fourier space
-    mesh        %  meshgrid coordinates 
+    mesh        %  meshgrid coordinates
+    ndims       %  number of dimensions
   end
   
 %%  Methods

@@ -1,4 +1,4 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
+function [phi, varargout] = groundstate(task,eps,phi0)
 % groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
 %
 %  Usage :
@@ -18,16 +18,22 @@ function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
 %    mu2      :  array of chemical potential from integral evaluation
 
 grid = task.grid;
-V = task.getVtotal(0);
-g = task.g;
-omega = task.omega;
+rscale = grid.weight^(1/grid.ndims);
+escale = 1/rscale^2;
+% tscale = rscale^2;
+phiscale = rscale^(-grid.ndims/2);
+kk = grid.kk/escale;
+V = task.getVtotal(0)/escale;
+g = task.g*phiscale^2/escale;
+dt = 0.5;
+omega = task.omega/escale;
 % n_cn=task.n_crank;
 if(task.Ntotal > 0)
     nnn = task.Ntotal;
 else
     nnn = 1;
 end
-if(nargin <= 3)
+if(nargin <= 2)
     phi0 = 'rand';
 end
 if(isa(phi0,'char'))
@@ -44,38 +50,24 @@ else
     phi = sqrt(nnn)*grid.normalize(phi0);
 end
 
-ekk = exp(-grid.kk*dt);
+phi = phi/phiscale;
+
+ekk = exp(-kk*0.5*dt);
 if(omega ~= 0)
-    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
-    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);
-end    
+    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/escale/4*dt);
+    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/escale/4*dt);
+end
 MU = zeros(1000,1,'like',V);
 MU2 = zeros(1000,1,'like',V);
 EE = zeros(1000,1,'like',V);
+% dts=[];
+% deltas = [];
 i = 0;
+iswitch = 50;
 
 tmp2 = real(phi.*conj(phi))*g+V;
 while true
     i=i+1;
-%     phi = grid.ifft(ekk.*grid.fft(phi));
-%     phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     phi = grid.iffty(eky.*grid.ffty(phi)); 
-    if(omega ~= 0)
-        phi = grid.ifftx(ekx.*grid.fftx(phi));
-        phi = grid.iffty(eky.*grid.ffty(phi));
-    else
-        phi = grid.ifft(ekk.*grid.fft(phi));
-    end    
-    phi = exp(-tmp2*dt).*phi;
-%     phi = grid.ifft(ekk.*grid.fft(phi));
-%     if(omega ~= 0)
-%         lphi = phi;
-%         for ii = 1:n_cn
-%             lphi = phi + dt*omega*grid.lz(lphi);
-%             lphi = 0.5*(phi+lphi);
-%         end
-%         phi = phi + dt*omega*grid.lz(lphi);
-%     end
 %     phi = exp(-tmp2*dt*0.5).*phi;
     if(omega ~= 0)
         phi = grid.ifftx(ekx.*grid.fftx(phi));
@@ -83,46 +75,72 @@ while true
     else
         phi = grid.ifft(ekk.*grid.fft(phi));
     end
-%     phi = grid.iffty(eky.*grid.ffty(phi));
-%     phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     phi = grid.ifft(ekk.*grid.fft(phi));
+        phi = exp(-tmp2*dt).*phi;
+
+    if(omega ~= 0)
+        phi = grid.iffty(eky.*grid.ffty(phi));
+        phi = grid.ifftx(ekx.*grid.fftx(phi));
+    else
+        phi = grid.ifft(ekk.*grid.fft(phi));
+    end
+%     phi = exp(-tmp2*dt*0.5).*phi;
     
     tmp = real(phi.*conj(phi));
     if(task.Ntotal > 0)
-        mu = sqrt(task.Ntotal/grid.integrate(tmp));
-        MU(i) = log(mu)/dt;
+        mu = sqrt(task.Ntotal/grid.integrate(tmp))/phiscale;
+        MU(i) = log(mu)/dt*escale;
     else
-        mu = exp(task.mu_init*dt);
-        MU(i) = grid.integrate(tmp*mu^2);
+        mu = exp(task.mu_init/escale*dt);
+        MU(i) = grid.integrate(tmp)*mu^2*phiscale^2;
     end
     phi=phi*mu;
     tmp = tmp*mu^2;
+% imagesc(abs(phi));drawnow;
     tmp2 = tmp*g+V;
-%     imagesc(abs(phi));drawnow;
+
     if(nargout >= 3)
-        MU2(i) = real(grid.inner(phi,task.applyham(phi)));
+        hphi = task.applyham(phi*phiscale);
+        MU2(i) = real(grid.inner(phi*phiscale,hphi))/task.Ntotal;
+    else
+        MU2(i) = MU(i);
     end
     if(nargout >= 4)
-        EE(i) = task.get_energy(phi)/task.Ntotal;
-    end    
-
-    if(i>50 && mod(i,10) == 0)
-        delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt/MU(i);
+        EE(i) = task.get_energy(phi*phiscale)/task.Ntotal;
+%         EE(i) = grid.integrate(abs(MU2(i)*phi*phiscale-hphi).^2)/task.Ntotal; 
+    else
+        EE(i) = MU2(i);
+    end
+% dts(i) = dt;
+% if(i>20)
+% deltas(i) = abs((EE(i)-EE(i-10))^2/(EE(i)-2*EE(i-10)+EE(i-20)))/EE(i);
+% semilogy(deltas);drawnow;
+% end
+    if((i-iswitch)>100 && mod(i,10) == 0)
+        delta = abs((EE(i)-EE(i-10))^2/(EE(i)-2*EE(i-10)+EE(i-20)))/EE(i);
+%         if((EE(i)-2*EE(i-10)+EE(i-20))<0)
+%             phi = phi + 0.1*grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V));
+%         end
+%         delta = abs((MU2(i)-MU2(i-10))^2/(MU2(i)-2*MU2(i-10)+MU2(i-20)))/MU2(i);
+%         delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt/MU(i);
+%         delta = EE(i);
         if(delta < eps)
             if (dt<eps*10 || dt<1e-4)
                 break;
             else
                 dt = dt/1.5;
-                ekk = exp(-grid.kk*0.5*dt);
+                ekk = exp(-0.5*kk*dt);
                 if(omega ~= 0)
-                    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
-                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);                
+                    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/escale/4*dt);
+                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/escale/4*dt);
                 end
+                iswitch = i;
             end
         end
     end
     
-    if(i>=50000)
+%     semilogy(EE);hold on;plot((MU2(:)-MU(:))./dts(:).^2);hold off;drawnow;
+    
+    if(i>=10000)
         warning('Convergence not reached');
         break;
     end
@@ -131,7 +149,7 @@ end
 if(nargout >= 2)
     MU = MU(1:i);
     if(task.Ntotal > 0)
-        MUEX = MU(i) - (MU(i)-MU(i-5))^2/(MU(i)-2*MU(i-5)+MU(i-10)); % exponential extrapolation
+        MUEX = MU(i) - (MU(i)-MU(i-10))^2/(MU(i)-2*MU(i-10)+MU(i-20)); % exponential extrapolation
         MU = [MU; MUEX];
         task.current_mu = MUEX;
         task.current_n = task.Ntotal;
@@ -140,8 +158,8 @@ if(nargout >= 2)
 end
 if(nargout >= 3)
     if(task.Ntotal > 0)
-        MUEX = MU2(i) - (MU2(i)-MU2(i-5))^2/(MU2(i)-2*MU2(i-5)+MU2(i-10)); % exponential extrapolation
-        MU2 = [MU2(1:i); MUEX]/task.Ntotal;
+        MUEX = MU2(i) - (MU2(i)-MU2(i-10))^2/(MU2(i)-2*MU2(i-10)+MU2(i-20)); % exponential extrapolation
+        MU2 = [MU2(1:i); MUEX];
     else
         MU2 = MU2(1:i)./MU;
         task.current_mu = MU2(end);
@@ -149,6 +167,7 @@ if(nargout >= 3)
     end
     varargout{2} = MU2;
 end
+
 if(nargout >= 4)
     if(task.Ntotal > 0)
         MUEX = EE(i) - (EE(i)-EE(i-10))^2/(EE(i)-2*EE(i-10)+EE(i-20)); % exponential extrapolation
@@ -159,5 +178,7 @@ if(nargout >= 4)
     varargout{3} = EE;
 end
 
+phi = phi*phiscale;
 task.init_state = phi;
+task.current_state = phi;
 end

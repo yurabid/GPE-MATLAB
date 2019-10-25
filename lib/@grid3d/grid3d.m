@@ -9,6 +9,9 @@ classdef grid3d < gridBase
     x           %  positions of grid along x
     y           %  positions of grid along y
     z           %  positions of grid along z
+    kx          %  momentum grid along x
+    ky          %  momentum grid along y
+    kz          %  momentum grid along z      
 %     weight      %  integration weight
 %     kk          %  Laplace operator in Fourier space
 %     mesh        %  meshgrid coordinates for x, y, z and x2, y2 (2D mesh in XY plane)
@@ -28,6 +31,7 @@ classdef grid3d < gridBase
       %    xmax, ymax, zmax   :  largest  grid points (smallest points are symmetric)
       %    nx,   ny,   nz     :  number of point in each dimension
       %  initialization
+      obj.ndims = 3;
       obj = init( obj, varargin{ : } );
     end
   

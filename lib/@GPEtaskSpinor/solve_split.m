@@ -13,7 +13,6 @@ function phi = solve_split(task,ddt,niter_inner,niter_outer)
 task.dispstat('','init');
 tic;
 ncomp = size(task.g,1);
-coupl = task.coupling;
 grid = task.grid;
 % VV = task.getVtotal(0);
 g = task.g;
@@ -48,10 +47,7 @@ ekkm = exp(grid.kk*dt*0.5);
 tmp = cell(1,ncomp);
 tmp2 = cell(1,ncomp);
 % tmp3 = cell(1,ncomp);
-cang = angle(coupl);
-cosom = cosh(dt*abs(coupl));
-sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
-sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
+
 
 hphi = task.applyham(phi);
 mu = 0;
@@ -62,6 +58,11 @@ mu = mu/NN0;
 dt_outer = ddt*niter_inner;
 % main BIG cycle starts here
 for j=start+1:niter_outer
+    coupl = task.coupling;
+    cang = angle(coupl);
+    cosom = cosh(dt*abs(coupl));
+    sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
+    sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
     time=(j-1)*dt_outer;
     for jj=1:niter_inner/n_rec
         
@@ -86,13 +87,19 @@ for j=start+1:niter_outer
                 for k = 1:ncomp
                     tmp2{i} = tmp2{i} + g(i,k)*abs(phi{k}).^2;
                 end
-            end             
+            end    
+    if(task.nlincpl~=0)
+        tmp3 = coupl + task.nlincpl*(abs(phi{1}).^2+abs(phi{2}).^2);
+        cosom = cosh(dt*tmp3);
+        sinomm = sinh(dt*tmp3);
+        sinomp = sinomm;
+    end                
 %             for i =1:ncomp                
 %                 phi{i} = exp(-tmp2{i}*dt).*tmp3{i};
 %             end  
 %             for i =1:ncomp                
-                tmp2{1} = exp(-tmp2{1}*dt).*(cosom.*phi{1} - sinomm.*phi{2});
-                tmp2{2} = exp(-tmp2{2}*dt).*(cosom.*phi{2} - sinomp.*phi{1});
+                tmp2{1} = exp(-tmp2{1}*dt).*(cosom.*phi{1} - sinomp.*phi{2});
+                tmp2{2} = exp(-tmp2{2}*dt).*(cosom.*phi{2} - sinomm.*phi{1});
 %             end            
             for i =1:ncomp
                 phi{i} = grid.ifft(ekk.*grid.fft(tmp2{i}));
@@ -106,31 +113,35 @@ for j=start+1:niter_outer
             if(tau >0)
                 NNN = NN0*exp(-time2/tau);
             end
-            ncur = 0;
-            mu = 0;
-            for i =1:ncomp
-                tmp{i} = real(phi{i}.*conj(phi{i}));
-                ncur = ncur + grid.integrate(tmp{i});
-            end  
+%             ncur = 0;
+%             mu = 0;
+%             for i =1:ncomp
+%                 tmp{i} = real(phi{i}.*conj(phi{i}));
+%                 ncur = ncur + grid.integrate(tmp{i});
+%             end  
+            ncur = real(grid.integrate(phi{1}.*conj(phi{1}) + phi{2}.*conj(phi{2})));
             for i =1:ncomp
                 phi{i} = phi{i}*sqrt(NNN/ncur);
             end
             hphi = task.applyham(phi);
-            for i =1:ncomp
-                mu = mu + real(grid.inner(phi{i},hphi{i}));
-            end
-            mu = mu/NNN;
+            mu = task.inner(phi,hphi)/NNN;
+%             for i =1:ncomp
+%                 mu = mu + real(grid.inner(phi{i},hphi{i}));
+%             end
+%             mu = mu/NNN;
 
         else
-            ncur = 0;
-            mu = 0;
+%             ncur = 0;
+%             mu = 0;
+            ncur = real(grid.integrate(phi{1}.*conj(phi{1}) + phi{2}.*conj(phi{2})));
             hphi = task.applyham(phi);
-            for i =1:ncomp
-                tmp{i} = real(phi{i}.*conj(phi{i}));
-                ncur = ncur + grid.integrate(tmp{i});
-                mu = mu + real(grid.inner(phi{i},hphi{i}));
-            end
-            mu = mu/NNN;
+            mu = task.inner(phi,hphi)/NNN;
+%             for i =1:ncomp
+%                 tmp{i} = real(phi{i}.*conj(phi{i}));
+%                 ncur = ncur + grid.integrate(tmp{i});
+%                 mu = mu + real(grid.inner(phi{i},hphi{i}));
+%             end
+%             mu = mu/NNN;
         end
     end
     task.ext_callback(phi,j,time2,mu,ncur);

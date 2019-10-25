@@ -26,8 +26,8 @@ dy = y( 2 ) - y( 1 );
 kx = gpuArray([ (0:nx/2) -(nx/2-1:-1:1)]*pi/x(end));
 ky = gpuArray([ (0:ny/2) -(ny/2-1:-1:1)]*pi/y(end));
 
-[ kx, ky ] = meshgrid( kx, ky );
-obj.kk = (kx.^2+ky.^2)/2;
+[ obj.kx, obj.ky ] = meshgrid( kx, ky );
+obj.kk = (obj.kx.^2+obj.ky.^2)/2;
 
 %%  meshgrid coordinates
 %  mesh grid data 

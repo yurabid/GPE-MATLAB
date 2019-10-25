@@ -26,73 +26,99 @@ if(nargin <= 3)
     phi = cellfun(@(x) grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V))./sqrt(ncomp), cell(1,ncomp), 'UniformOutput', false);
 end
 ekk = exp(-grid.kk*dt*0.5);
-MU = zeros(1000,'like',V);
+MU = zeros(5000,1,'like',V);
+MU2 = zeros(5000,1,'like',V);
+dts = zeros(5000,1,'like',V);
+EE = zeros(5000,1,'like',V);
 delta = 1;
 i = 1;
+iswitch = 50;
 
-tmp = cell(1,ncomp);
 tmp2 = cell(1,ncomp);
-% tmp3 = cell(1,ncomp);
 cang = angle(coupl);
 cosom = cosh(dt*abs(coupl));
 sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
 sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
 
-    
-while delta > eps
-
+while true
     for j =1:ncomp
         tmp2{j} = VV{j};
         for k = 1:ncomp
             tmp2{j} = tmp2{j} + g(j,k)*abs(phi{k}).^2;%.*conj(phi{k}));
         end
-    end     
-    for j = 1:ncomp
-        phi{j} = grid.ifft(ekk.*grid.fft(phi{j}));
     end
-    %for j = 1:ncomp
-        tmp2{1} = exp(-tmp2{1}*dt).*(cosom.*phi{1} - sinomm.*phi{2});
-        tmp2{2} = exp(-tmp2{2}*dt).*(cosom.*phi{2} - sinomp.*phi{1});
-    %end
-
-    for j = 1:ncomp
-        phi{j} = grid.ifft(ekk.*grid.fft(tmp2{j}));
+    if(task.nlincpl~=0)
+        tmp3 = coupl + task.nlincpl*(abs(phi{1}).^2+abs(phi{2}).^2);
+        cosom = cosh(dt*tmp3);
+        sinomm = sinh(dt*tmp3);
+        sinomp = sinomm;
     end
+    phi{1} = grid.ifft(ekk.*grid.fft(phi{1}));
+    phi{2} = grid.ifft(ekk.*grid.fft(phi{2}));
+    tmp2{1} = exp(-tmp2{1}*dt).*(cosom.*phi{1} - sinomp.*phi{2});
+    tmp2{2} = exp(-tmp2{2}*dt).*(cosom.*phi{2} - sinomm.*phi{1});
+    phi{1} = grid.ifft(ekk.*grid.fft(tmp2{1}));
+    phi{2} = grid.ifft(ekk.*grid.fft(tmp2{2}));
     
-    ntot = 0;
-    for j =1:ncomp
-        tmp{j} = real(phi{j}.*conj(phi{j}));
-        ntot = ntot + grid.integrate(tmp{j});
-    end
+    ntot = real(grid.integrate(phi{1}.*conj(phi{1}) + phi{2}.*conj(phi{2})));
     mu = sqrt(task.Ntotal/ntot);
-    MU(i) = mu;
-    
+    MU(i) = log(mu)/dt;
+    dts(i) = dt;
     for j =1:ncomp
         phi{j}=phi{j}.*mu;
     end
     
-    if(i>50)
-        delta = sum(abs(log(MU(i-10)./mu))/dt^2*10);
+    if(nargout >= 3)
+        MU2(i) = real(task.inner(phi,task.applyham(phi)))/task.Ntotal;
+    else
+        MU2(i) = MU(i);
     end
-    i=i+1;
-    if(i>=10000) 
+    if(nargout >= 4)
+        EE(i) = task.get_energy(phi)/task.Ntotal;
+    else
+        EE(i) = MU2(i);
+    end
+
+    if((i-iswitch)>200 && mod(i,10) == 0)
+        delta = (abs(EE(i)-EE(i-9))/9 + abs(EE(i)-EE(i-1)))/dt;
+        if(delta<dt*0.001 || delta < eps)
+            if (dt<eps || dt<5e-6)
+                break;
+            else
+                dt = dt/1.5;
+                ekk = exp(-grid.kk*dt*0.5);
+                cosom = cosh(dt*abs(coupl));
+                sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
+                sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
+                iswitch = i;
+            end
+%         elseif((i-iswitch)>500 && dt<0.02)
+%             dt = dt*1.3;
+%             ekk = exp(-grid.kk*dt*0.5);
+%             cosom = cosh(dt*abs(coupl));
+%             sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
+%             sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
+%             iswitch = i;
+        end
+    end
+    if(i>=50000)
         warning('Convergence not reached');
         break;
     end
+    i=i+1;
 end
 
 if(nargout >= 2)
-    MU = MU(1:nnz(MU));
-    MU = log(MU)/dt;
+    MU = MU(1:i-1);
     varargout{1} = MU;
 end
 if(nargout >= 3)
-    mu = 0;
-    hphi = task.applyham(phi);
-    for i =1:ncomp
-        mu = mu + real(grid.inner(phi{i},hphi{i}));
-    end
-    varargout{2} = mu/task.Ntotal;    
+    MU2 = MU2(1:i-1);
+    varargout{2} = MU2;
+end
+if(nargout >= 4)
+    EE = EE(1:i-1);
+    varargout{3} = EE;
 end
 task.init_state = phi;
 task.current_state = phi;

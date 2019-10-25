@@ -7,6 +7,8 @@ classdef grid2d < gridBase
     ny          %  number of y positions
     x           %  positions of grid along x
     y           %  positions of grid along y
+    kx
+    ky
     %weight      %  integration weight
     %kk          %  Laplace operator in Fourier space
     %mesh        %  meshgrid coordinates for x, y (also z=0, x2=x, y2=y are included for compatibility)
@@ -26,12 +28,13 @@ classdef grid2d < gridBase
       %    xmax, ymax   :  largest  grid points (smallest points are symmetric)
       %    nx,   ny     :  number of point in each dimension
       %  initialization
+      obj.ndims = 2;
       obj = init( obj, varargin{ : } );
     end
   
     function disp( obj )
       %  Command window display.
-      disp( 'grid3d :' );
+      disp( 'grid2d :' );
       disp( struct( 'x', ([ min( obj.x ), max( obj.x ), length( obj.x ) ]),  ... 
                     'y', ([ min( obj.y ), max( obj.y ), length( obj.y ) ]) ) );
     end

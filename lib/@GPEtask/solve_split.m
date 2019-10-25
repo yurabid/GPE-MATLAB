@@ -46,7 +46,7 @@ for j=start+1:niter_outer
     for jj=1:niter_inner/n_rec
         
         time2=time+(jj-1)*ddt*n_rec;
-        VV = task.getVtotal(time2)-mu;
+        VV = task.getVtotal(time2);%-mu;
         phi = exp(( - VV - g*tmp2)*dt*0.5).*phi;
         % main SMALL cycle starts here
         for i=1:n_rec

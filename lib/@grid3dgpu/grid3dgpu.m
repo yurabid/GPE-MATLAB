@@ -32,6 +32,7 @@ classdef grid3dgpu < gridBase
       %    xmax, ymax, zmax   :  largest  grid points (smallest points are symmetric)
       %    nx,   ny,   nz     :  number of points in each dimension
       %  initialization
+      obj.ndims = 3;
       obj = init( obj, varargin{ : } );
     end
   

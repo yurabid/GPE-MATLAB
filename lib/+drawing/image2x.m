@@ -105,7 +105,7 @@ surface(rx,ry,zeros(size(cdata)),cdata,'Parent',axs(1),'CDataMapping','scaled','
 surface(rx,ry,zeros(size(cdata2)),cdata2,'Parent',axs(2),'CDataMapping','scaled','EdgeColor','none');
 
 % set(figure1, 'PaperUnits', 'inches', 'PaperPosition', [0 0 8 10]);
-%print(figure1,'-dpng',sprintf('snapshots/combined_%05d.png',tind), '-r150');
+% print(figure1,'-dpng',sprintf('snapshots/combined_%05d.png',tind), '-r150');
 if(nargin<6 || hideshow>0)
     set(figure1, 'Visible', 'on');
 end

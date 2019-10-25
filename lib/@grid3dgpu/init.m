@@ -31,8 +31,8 @@ obj.kx = gpuArray([ (0:nx/2) -(nx/2-1:-1:1)]*pi/x(end));
 obj.ky = gpuArray([ (0:ny/2) -(ny/2-1:-1:1)]*pi/y(end));
 obj.kz = gpuArray([ (0:nz/2) -(nz/2-1:-1:1)]*pi/z(end));
 
-[ kx, ky, kz ] = meshgrid( obj.kx, obj.ky, obj.kz );
-obj.kk = (kx.^2+ky.^2+kz.^2)/2;
+[ obj.kx, obj.ky, obj.kz ] = meshgrid( obj.kx, obj.ky, obj.kz );
+obj.kk = (obj.kx.^2+obj.ky.^2+obj.kz.^2)/2;
 
 %%  meshgrid coordinates
 %  mesh grid data 
