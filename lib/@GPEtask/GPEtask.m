@@ -1,6 +1,6 @@
 classdef GPEtask < handle
     %GPEtask - Solution of the Gross-Pitaevsii equation
-    
+
     properties
         grid               % grid object
         g                  % coupling coefficient
@@ -13,7 +13,7 @@ classdef GPEtask < handle
         mu_init = 0        % initial chemical potential
         Vtrap              % matrix of the static trap potential
         Vtd                % function handle to the time-dependent potential
-        V0 = 0             % INTERNAL: total potential at t=0  
+        V0 = 0             % INTERNAL: total potential at t=0
         Vcurrent = 0       % matrix of the current total trap potential
         init_state         % initial state
         current_state      % current state in dynamics
@@ -27,8 +27,11 @@ classdef GPEtask < handle
         dt                 % time step for history arrays
         totalTime          % total evolution time
         show_image = 0     % show density image on each time step
+        spectrum_w
+        spectrum_u
+        spectrum_v
     end
-    
+
     methods
         function obj = GPEtask(grid,trappot)
             obj.grid = grid;
@@ -45,22 +48,23 @@ classdef GPEtask < handle
             obj.dispstat('','init');
             obj.history = struct('mu',zeros(1,0,'like',grid.x),'n',zeros(1,0,'like',grid.x));
         end
-        
+
         function v = getVtotal(obj,time)
             if(time == 0 && numel(obj.V0)>1)
                 v = obj.V0;
             elseif(isa(obj.Vtd,'function_handle'))
-                v = bsxfun(@plus,obj.Vtrap,obj.Vtd(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
+%                 v = bsxfun(@plus,obj.Vtrap,obj.Vtd(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
+                v = obj.Vtrap + obj.Vtd(obj,time);
             else
                 v = obj.Vtrap;
             end
         end
-        
+
         function res = applyham(obj,phi,time)
             if(nargin==2)
                 time = obj.current_time;
             end
-            res = obj.getVtotal(time).*phi + obj.g*abs(phi).^2.*phi;
+            res = obj.getVtotal(time).*phi + obj.g.*abs(phi).^2.*phi;
 %             if(obj.omega ~= 0)
 %                 res = res - obj.omega*obj.grid.lz(phi);
 %             end
@@ -69,9 +73,9 @@ classdef GPEtask < handle
                 res = res + obj.grid.lap(phi,obj.omega);
             else
                 res = res + obj.grid.lap(phi);
-            end            
+            end
         end
-        
+
         function res = applyh0(obj,phi,time)
             if(nargin==2)
                 time = obj.current_time;
@@ -84,26 +88,26 @@ classdef GPEtask < handle
                 res = res + obj.grid.lap(phi);
             end
         end
-        
+
         function res = get_energy(obj,phi,time)
             if(nargin<3)
                 time = obj.current_time;
             end
             if(nargin<2)
                 phi = obj.current_state;
-            end            
+            end
             tmp = obj.g;
             obj.g = 0.5*obj.g;
             res = real(obj.grid.inner(phi,obj.applyham(phi,time)));
             obj.g=tmp;
         end
-        
+
   end
-  
-  methods (Access = protected) 
-      
+
+  methods (Access = protected)
+
       dispstat(obj,TXT,varargin);
-      
+
         function res=ext_callback(obj,phi,step,time,mu,n)
             if(exist('snapshots','file') ~= 7)
                 mkdir('snapshots');
@@ -133,6 +137,6 @@ classdef GPEtask < handle
             res = res_text;
         end
     end
-    
+
 end
 

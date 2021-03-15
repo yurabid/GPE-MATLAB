@@ -38,7 +38,12 @@ else
 end
 
 tmp2 = real(phi.*conj(phi));
-mu = real(grid.inner(phi,task.applyham(phi)))./NN0;
+muc = real(grid.inner(phi,task.applyham(phi)))./NN0;
+if(task.mu_init > 0)
+    mu = task.mu_init;
+else
+    mu = muc;
+end
 dt_outer = ddt*niter_inner;
 % main BIG cycle starts here
 for j=start+1:niter_outer
@@ -46,8 +51,8 @@ for j=start+1:niter_outer
     for jj=1:niter_inner/n_rec
         
         time2=time+(jj-1)*ddt*n_rec;
-        VV = task.getVtotal(time2);%-mu;
-        phi = exp(( - VV - g*tmp2)*dt*0.5).*phi;
+        VV = task.getVtotal(time2)-mu;
+        phi = exp(( - VV - g.*tmp2)*dt*0.5).*phi;
         % main SMALL cycle starts here
         for i=1:n_rec
             phi = grid.ifft(ekk.*grid.fft(phi));
@@ -60,28 +65,26 @@ for j=start+1:niter_outer
                 phi = phi + dt*omega*grid.lz(lphi);
             end
             
-            phi = exp(( - VV - g*phi.*conj(phi))*dt).*phi;
+            phi = exp(( - VV - g.*phi.*conj(phi))*dt).*phi;
         end
         
-        phi = exp((VV + g*phi.*conj(phi))*dt*0.5).*phi;
+        phi = exp((VV + g.*phi.*conj(phi))*dt*0.5).*phi;
         tmp2 = real(phi.*conj(phi));
         
-        if(gam>0)
+        ncur = grid.integrate(tmp2);
+        if(gam>0 && task.mu_init == 0)
             if(tau >0)
                 NNN = NN0*exp(-time2/tau);
-            end
-            
-            ncur = grid.integrate(tmp2);
+            end                
             phi = phi*sqrt(NNN/ncur);
             tmp2 = tmp2*(NNN/ncur);
-            mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
-
+            muc = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
+            mu = muc;
         else
-            ncur = grid.integrate(tmp2);
-            mu = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
+            muc = real(grid.inner(phi,task.applyham(phi,time2)))/ncur;
         end
     end
-    task.ext_callback(phi,j,time2,mu,ncur);
+    task.ext_callback(phi,j,time2,muc,ncur);
     
 end
 

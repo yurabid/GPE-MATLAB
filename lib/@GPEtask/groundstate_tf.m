@@ -21,14 +21,15 @@ if(nargin < 5)
     end
     mul = min(V(:));
 %     ndim = ndims(task.grid.mesh.x);
-    ndim = nnz(size(task.grid.mesh.x)>1);
-    if(ndim==3)
-        mur = min([V(1,end/2,end/2), V(end,end/2,end/2),V(end/2,1,end/2), V(end/2,end,end/2),V(end/2,end/2,1), V(end/2,end/2,end)]);
-    elseif(ndim==2)
-        mur = min([V(1,end/2), V(end,end/2),V(end/2,1), V(end/2,end)]);
-    else
-        mur = min([V(1), V(end)]);
-    end
+%     ndim = nnz(size(task.grid.mesh.x)>1);
+%     if(ndim==3)
+%         mur = min([V(1,end/2,end/2), V(end,end/2,end/2),V(end/2,1,end/2), V(end/2,end,end/2),V(end/2,end/2,1), V(end/2,end/2,end)]);
+%     elseif(ndim==2)
+%         mur = min([V(1,end/2), V(end,end/2),V(end/2,1), V(end/2,end)]);
+%     else
+%         mur = min([V(1), V(end)]);
+%     end
+    mur = max(V(:));
 end
 NC = N*task.g(1)/task.grid.weight;
 mu = (mul+mur)/2;

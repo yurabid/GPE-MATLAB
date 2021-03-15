@@ -1,4 +1,4 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
+function [phi, varargout] = bdg_itp(task,dt,eps,num)
 % groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
 %
 %  Usage :
@@ -21,91 +21,77 @@ grid = task.grid;
 V = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
-% n_cn=task.n_crank;
-if(task.Ntotal > 0)
-    nnn = task.Ntotal;
-else
-    nnn = 1;
-end
-if(nargin <= 3)
-    phi0 = 'rand';
-end
-if(isa(phi0,'char'))
-    if(task.Ntotal > 0)
-        if(strcmp(phi0,'tf'))
-            [phi,~] = task.groundstate_tf(eps); % Thomas-Fermi initial guess
-        else
-            phi = sqrt(nnn)*grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V)); % random initial guess
-        end
-    else
-        phi = real(sqrt(complex(task.mu_init - V)./g)); % use only Thomas-Fermi approximation as initial guess if mu_init is set
-    end
-else
-    phi = sqrt(nnn)*grid.normalize(phi0);
-end
-
+phi0 = task.current_state;
+NN = grid.inner(phi0,phi0);
 ekk = exp(-grid.kk*0.5*dt);
 if(omega ~= 0)
     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
     eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);
 end
 MU = zeros(1000,1,'like',V);
-MU2 = zeros(1000,1,'like',V);
+% MU2 = zeros(1000,1,'like',V);
 EE = zeros(1000,1,'like',V);
-i = 0;
+task.spectrum_u = zeros([size(phi0),num]);
+task.spectrum_v = zeros([size(phi0),num]);
+task.spectrum_w = zeros(num,1);
+mu = real(grid.inner(phi,task.applyham(phi)));
+tmp = real(phi0.*conj(phi0)).*g;
+tmp2 = 2*tmp+V;
+cosnl = cosh(dt*tmp);
+sinnl = sinh(dt*tmp);
 
-tmp2 = real(phi.*conj(phi)).*g+V;
+for j=1:num
+uc = sqrt(nnn)*grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V));
+vc = sqrt(nnn)*grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V));
+
+i = 0;
 while true
     i=i+1;
-%     phi = grid.ifft(ekk.*grid.fft(phi));
-%     phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     phi = grid.iffty(eky.*grid.ffty(phi));
     if(omega ~= 0)
-        phi = grid.ifftx(ekx.*grid.fftx(phi));
-        phi = grid.iffty(eky.*grid.ffty(phi));
+        uc = grid.ifftx(ekx.*grid.fftx(uc));
+        uc = grid.iffty(eky.*grid.ffty(uc));
+        vc = grid.ifftx(ekx.*grid.fftx(vc));
+        vc = grid.iffty(eky.*grid.ffty(vc));
     else
-        phi = grid.ifft(ekk.*grid.fft(phi));
+        uc = grid.ifft(ekk.*grid.fft(uc));
+        vc = grid.ifft(ekk.*grid.fft(vc));
     end
-    phi = exp(-tmp2*dt).*phi;
-%     phi = grid.ifft(ekk.*grid.fft(phi));
-%     if(omega ~= 0)
-%         lphi = phi;
-%         for ii = 1:n_cn
-%             lphi = phi + dt*omega*grid.lz(lphi);
-%             lphi = 0.5*(phi+lphi);
-%         end
-%         phi = phi + dt*omega*grid.lz(lphi);
-%     end
-%     phi = exp(-tmp2*dt*0.5).*phi;
+    uc = exp(-tmp2*dt).*(cosnl.*uc-sinnl.*vc);
+    vc = exp(-tmp2*dt).*(cosnl.*vc-sinnl.*uc);
     if(omega ~= 0)
-        phi = grid.ifftx(ekx.*grid.fftx(phi));
-        phi = grid.iffty(eky.*grid.ffty(phi));
+        uc = grid.ifftx(ekx.*grid.fftx(uc));
+        uc = grid.iffty(eky.*grid.ffty(uc));
+        vc = grid.ifftx(ekx.*grid.fftx(vc));
+        vc = grid.iffty(eky.*grid.ffty(vc));
     else
-        phi = grid.ifft(ekk.*grid.fft(phi));
+        uc = grid.ifft(ekk.*grid.fft(uc));
+        vc = grid.ifft(ekk.*grid.fft(vc));
     end
-%     phi = grid.iffty(eky.*grid.ffty(phi));
-%     phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     phi = grid.ifft(ekk.*grid.fft(phi));
 
-    tmp = real(phi.*conj(phi));
-    if(task.Ntotal > 0)
-        mu = sqrt(task.Ntotal/grid.integrate(tmp));
-        MU(i) = log(mu)/dt;
-    else
-        mu = exp(task.mu_init*dt);
-        MU(i) = grid.integrate(tmp*mu^2);
+tmp3 = grid.inner(vc,phi0)*phi0/NN;
+tmp4 = grid.inner(uc,phi0)*phi0/NN;
+if (j>1)
+    for jj=1:j-1
+        tmp3 = tmp3 + grid.inner(vc,task.spectrum_v(:,:,:,jj))*task.spectrum_v(:,:,:,jj);
+        tmp4 = tmp4 + grid.inner(uc,task.spectrum_u(:,:,:,jj))*task.spectrum_u(:,:,:,jj);
     end
-    phi=phi*mu;
-    tmp = tmp*mu^2;
-    tmp2 = tmp.*g+V;
-    task.current_state = phi;
+end
+    vc = vc - tmp3;
+    uc = uc - tmp4;
+    mu = sqrt(1/(grid.integrate(abs(vc).^2+abs(uc).^2)));
+    MU(i) = log(mu)/dt;
+    vc=vc*mu;
+    uc=uc*mu;
+%     tmp = tmp*mu^2;
+%     tmp2 = tmp.*g+V;
+%     task.current_state = phi;
 %     imagesc(abs(phi));drawnow;
-    if(nargout >= 3)
-        MU2(i) = real(grid.inner(phi,task.applyham(phi)));
-    end
-    if(nargout >= 4)
-        EE(i) = task.get_energy(phi)/task.Ntotal;
-    end
+%     if(nargout >= 3)
+%         MU2(i) = real(grid.inner(phi,task.applyham(phi)));
+%     end
+%     if(nargout >= 4)
+%         EE(i) = task.get_energy(phi)/task.Ntotal;
+%     end
 
     if(i>50 && mod(i,10) == 0)
         delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt/MU(i);

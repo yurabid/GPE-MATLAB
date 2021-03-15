@@ -20,7 +20,7 @@ classdef PGPEtask < GPEtask
             if(nargin<=3)
                  phir = obj.grid.sp2grid(phi);
             end            
-            res = obj.grid.etot.*phi + obj.grid.grid2sp((obj.getVtotal(time) + obj.g*abs(phir.^2)).*phir);
+            res = obj.grid.applyh0(phi) + obj.grid.grid2sp((obj.getVtotal(time) + obj.g*abs(phir.^2)).*phir);
         end
         
         function res = applyh0(obj,phi,time,phir)
@@ -30,7 +30,7 @@ classdef PGPEtask < GPEtask
             if(nargin<=3)
                  phir = obj.grid.sp2grid(phi);
             end  
-            res = obj.grid.etot.*phi + obj.grid.grid2sp(obj.getVtotal(time).*phir);
+            res = obj.grid.applyh0(phi) + obj.grid.grid2sp(obj.getVtotal(time).*phir);
         end        
     end
   

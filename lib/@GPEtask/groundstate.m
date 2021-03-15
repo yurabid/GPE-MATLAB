@@ -44,7 +44,7 @@ if(isa(phi0,'char'))
             phi = sqrt(nnn)*grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V)); % random initial guess
         end
     else
-        phi = real(sqrt(complex(task.mu_init - V)/g)); % use only Thomas-Fermi approximation as initial guess if mu_init is set
+        phi = real(sqrt(complex(task.mu_init - V)./g)); % use only Thomas-Fermi approximation as initial guess if mu_init is set
     end
 else
     phi = sqrt(nnn)*grid.normalize(phi0);
@@ -65,7 +65,7 @@ EE = zeros(1000,1,'like',V);
 i = 0;
 iswitch = 50;
 
-tmp2 = real(phi.*conj(phi))*g+V;
+tmp2 = real(phi.*conj(phi)).*g+V;
 while true
     i=i+1;
 %     phi = exp(-tmp2*dt*0.5).*phi;
@@ -96,16 +96,17 @@ while true
     phi=phi*mu;
     tmp = tmp*mu^2;
 % imagesc(abs(phi));drawnow;
-    tmp2 = tmp*g+V;
+    tmp2 = tmp.*g+V;
 
     if(nargout >= 3)
+        ncur = 1;%grid.integrate(tmp)*phiscale^2;
         hphi = task.applyham(phi*phiscale);
-        MU2(i) = real(grid.inner(phi*phiscale,hphi))/task.Ntotal;
+        MU2(i) = real(grid.inner(phi*phiscale,hphi))/ncur;
     else
         MU2(i) = MU(i);
     end
     if(nargout >= 4)
-        EE(i) = task.get_energy(phi*phiscale)/task.Ntotal;
+        EE(i) = task.get_energy(phi*phiscale)/ncur;
 %         EE(i) = grid.integrate(abs(MU2(i)*phi*phiscale-hphi).^2)/task.Ntotal; 
     else
         EE(i) = MU2(i);
@@ -149,17 +150,18 @@ end
 if(nargout >= 2)
     MU = MU(1:i);
     if(task.Ntotal > 0)
-        MUEX = MU(i) - (MU(i)-MU(i-10))^2/(MU(i)-2*MU(i-10)+MU(i-20)); % exponential extrapolation
-        MU = [MU; MUEX];
-        task.current_mu = MUEX;
+%         MUEX = MU(i) - (MU(i)-MU(i-10))^2/(MU(i)-2*MU(i-10)+MU(i-20)); % exponential extrapolation
+%         MU = [MU; MUEX];
+        task.current_mu = MU(end);
         task.current_n = task.Ntotal;
     end
     varargout{1} = MU;
 end
 if(nargout >= 3)
     if(task.Ntotal > 0)
-        MUEX = MU2(i) - (MU2(i)-MU2(i-10))^2/(MU2(i)-2*MU2(i-10)+MU2(i-20)); % exponential extrapolation
-        MU2 = [MU2(1:i); MUEX];
+        MU2 = MU2(1:i);
+%         MUEX = MU2(i) - (MU2(i)-MU2(i-10))^2/(MU2(i)-2*MU2(i-10)+MU2(i-20)); % exponential extrapolation
+%         MU2 = [MU2(1:i); MUEX];
     else
         MU2 = MU2(1:i)./MU;
         task.current_mu = MU2(end);
@@ -170,8 +172,9 @@ end
 
 if(nargout >= 4)
     if(task.Ntotal > 0)
-        MUEX = EE(i) - (EE(i)-EE(i-10))^2/(EE(i)-2*EE(i-10)+EE(i-20)); % exponential extrapolation
-        EE = [EE(1:i); MUEX];
+        EE = EE(1:i);
+%         MUEX = EE(i) - (EE(i)-EE(i-10))^2/(EE(i)-2*EE(i-10)+EE(i-20)); % exponential extrapolation
+%         EE = [EE(1:i); MUEX];
     else
         EE = EE(1:i)./MU;
     end

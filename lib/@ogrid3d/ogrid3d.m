@@ -127,7 +127,10 @@ classdef ogrid3d < handle
         nosc = [0:n-1];
         nn = repmat(nosc,length(grid),1);
         res = obj.osc_state(nosc,grid,om).*(-1i).^nn;
-    end    
+    end
+    function res = applyh0(obj,phi)
+        res = obj.etot.*phi;
+    end
     function res = grid2sp(obj,phi)
         res = obj.grid2sp_inner(phi.*obj.wtot);
     end

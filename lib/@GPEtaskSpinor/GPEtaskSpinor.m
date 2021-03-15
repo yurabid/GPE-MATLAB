@@ -28,12 +28,14 @@ classdef GPEtaskSpinor < GPEtask
             elseif(isa(obj.Vtd,'function_handle'))
                 v = cell(1,obj.ncomp);
                 for i=1:obj.ncomp
-                    v{i} = bsxfun(@plus,obj.Vtrap{i},obj.Vtd(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
+%                     v{i} = bsxfun(@plus,obj.Vtrap{i},obj.Vtd(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
+                    v{i} = obj.Vtrap{i} + obj.Vtd(obj,time);
                 end
             elseif(isa(obj.Vtd,'cell'))
                 v = cell(1,obj.ncomp);
                 for i=1:obj.ncomp
-                    v{i} = bsxfun(@plus,obj.Vtrap{i},obj.Vtd{i}(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
+%                     v{i} = bsxfun(@plus,obj.Vtrap{i},obj.Vtd{i}(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
+                    v{i} = obj.Vtrap{i} + obj.Vtd{i}(obj,time);
                 end
             else
                 v = obj.Vtrap;

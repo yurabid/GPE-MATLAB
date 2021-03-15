@@ -38,11 +38,11 @@ while delta > eps
     lphi = phi;
     lphir = phir;
     for ii = 1:n_cn        
-        lphi = phi - dt*(grid.etot.*lphi + grid.grid2sp((V+g*abs(lphir.^2)).*lphir));
+        lphi = phi - dt*(grid.applyh0(lphi) + grid.grid2sp((V+g*abs(lphir.^2)).*lphir));
         lphi = 0.5*(phi+lphi);
         lphir = grid.sp2grid(lphi);
     end
-    phi = phi - dt*(grid.etot.*lphi + grid.grid2sp((V+g*abs(lphir.^2)).*lphir));
+    phi = phi - dt*(grid.applyh0(lphi) + grid.grid2sp((V+g*abs(lphir.^2)).*lphir));
 
     mu = sqrt(1.0/sum(abs(grid.to1d(phi)).^2));
     phi=phi*mu;
@@ -50,7 +50,7 @@ while delta > eps
 
     MU(i) = mu;
     if(nargout >= 3)
-        MU2(i) = real(sum(grid.to1d(grid.etot.*abs(phi).^2 + conj(phi).*(grid.grid2sp((V+g*abs(phir.^2)).*phir)))));
+        MU2(i) = real(sum(grid.to1d(conj(phi).*(grid.applyh0(phi) + grid.grid2sp((V+g*abs(phir.^2)).*phir)))));
     end
     if(i>50)
         delta = abs(log(mu_old/mu))/dt^2/10;

@@ -39,42 +39,42 @@ for i=4:Ntot+3
     tmp(i+ind(:)) = trans;
     if(is_periodic ==0)
 %         tmp(i+ind(:)) = trans;
-		tmp(3) = tmp(3) - tmp(2);
-        tmp(4) = tmp(4) - tmp(1);
-		tmp(Ntot+2) = tmp(Ntot+2) - tmp(Ntot+3);
-        tmp(Ntot+1) = tmp(Ntot+1) - tmp(Ntot+4);
+		tmp(4) = tmp(4) - tmp(3);
+        tmp(5) = tmp(5) - tmp(2);
+		tmp(Ntot+3) = tmp(Ntot+3) - tmp(Ntot+4);
+        tmp(Ntot+2) = tmp(Ntot+2) - tmp(Ntot+5);
 %         A(i-2,:) = tmp(3:Ntot+2);
     elseif(is_periodic ==1)
-%         tmp = zeros(1,Ntot,'like',r);
+        tmp = zeros(1,Ntot,'like',r);
         tmp(max_stencil+1+ind(:)) = trans;
-        A(i-2,:) = circshift(tmp,[0,i-max_stencil-3]);
+        tmp = [0,0,0,circshift(tmp,[0,i-max_stencil-4]),0,0,0];
     elseif(is_periodic ==2)
 %         tmp = zeros(1,Ntot+4,'like',r);
 %         tmp(i+ind(:)) = trans;
-		tmp(3) = tmp(3) - tmp(1);
-		tmp(Ntot+2) = tmp(Ntot+2) - tmp(Ntot+4);
+		tmp(4) = tmp(4) - tmp(2);
+		tmp(Ntot+3) = tmp(Ntot+3) - tmp(Ntot+5);
 %         A(i-2,:) = tmp(3:Ntot+2);      
     elseif(is_periodic ==3)
 %         tmp = zeros(1,Ntot+4,'like',r);
 %         tmp(i+ind(:)) = trans;
-		tmp(3) = tmp(3) + tmp(2);
-        tmp(4) = tmp(4) + tmp(1);
-		tmp(Ntot+2) = tmp(Ntot+2) + tmp(Ntot+3);
-        tmp(Ntot+1) = tmp(Ntot+1) + tmp(Ntot+4);
+		tmp(4) = tmp(4) + tmp(3);
+        tmp(5) = tmp(5) + tmp(2);
+		tmp(Ntot+3) = tmp(Ntot+3) + tmp(Ntot+4);
+        tmp(Ntot+2) = tmp(Ntot+2) + tmp(Ntot+5);
 %         A(i-2,:) = tmp(3:Ntot+2);
     elseif(is_periodic ==4)
 %         tmp = zeros(1,Ntot+4,'like',r);
 %         tmp(i+ind(:)) = trans;
-		tmp(3) = tmp(3) + tmp(2) + tmp(1);
-		tmp(Ntot+2) = tmp(Ntot+2) + tmp(Ntot+3) + tmp(Ntot+4);
+		tmp(4) = tmp(4) + tmp(3) + tmp(2);
+		tmp(Ntot+3) = tmp(Ntot+3) + tmp(Ntot+4) + tmp(Ntot+5);
 %         A(i-2,:) = tmp(3:Ntot+2);          
 	else
 %         tmp = zeros(1,Ntot+4,'like',r);
 %         tmp(i+ind(:)) = trans;
-		tmp(3) = tmp(3) + 2*tmp(2) + 3*tmp(1);
-        tmp(4) = tmp(4) - tmp(2) - 2*tmp(1);
-		tmp(Ntot+2) = tmp(Ntot+2) + 2*tmp(Ntot+3) + 3*tmp(Ntot+4);
-        tmp(Ntot+1) = tmp(Ntot+1) - tmp(Ntot+3) - 2*tmp(Ntot+4);
+		tmp(4) = tmp(4) + 2*tmp(3) + 3*tmp(2);
+        tmp(5) = tmp(5) - tmp(3) - 2*tmp(2);
+		tmp(Ntot+3) = tmp(Ntot+3) + 2*tmp(Ntot+4) + 3*tmp(Ntot+5);
+        tmp(Ntot+2) = tmp(Ntot+2) - tmp(Ntot+4) - 2*tmp(Ntot+5);
 %         A(i-2,:) = tmp(3:Ntot+2);		   
     end
     A(i-3,:) = tmp(4:Ntot+3);

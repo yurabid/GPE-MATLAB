@@ -1,17 +1,11 @@
-classdef grid2d < gridBase
+classdef grid2d < grid1d
   %  Three-dimensional grid for solution of non-linear Schroedinger equation.
   
 %%  Properties
   properties
-    nx          %  number of x positions
     ny          %  number of y positions
-    x           %  positions of grid along x
     y           %  positions of grid along y
-    kx
     ky
-    %weight      %  integration weight
-    %kk          %  Laplace operator in Fourier space
-    %mesh        %  meshgrid coordinates for x, y (also z=0, x2=x, y2=y are included for compatibility)
   end
   
 %%  Methods
@@ -28,8 +22,10 @@ classdef grid2d < gridBase
       %    xmax, ymax   :  largest  grid points (smallest points are symmetric)
       %    nx,   ny     :  number of point in each dimension
       %  initialization
-      obj.ndims = 2;
-      obj = init( obj, varargin{ : } );
+      if nargin>0
+        obj.ndims = 2;
+        obj = init( obj, varargin{ : } );
+      end
     end
   
     function disp( obj )

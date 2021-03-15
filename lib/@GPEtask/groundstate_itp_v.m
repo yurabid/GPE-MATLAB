@@ -1,4 +1,4 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
+function [phi, varargout] = groundstate_itp_v(task,dt,eps,phi0)
 % groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
 %
 %  Usage :
@@ -21,6 +21,7 @@ grid = task.grid;
 V = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
+angs = atan2(grid.mesh.y,grid.mesh.x-3);
 % n_cn=task.n_crank;
 if(task.Ntotal > 0)
     nnn = task.Ntotal;
@@ -48,7 +49,7 @@ ekk = exp(-grid.kk*0.5*dt);
 if(omega ~= 0)
     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
     eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);
-end
+end    
 MU = zeros(1000,1,'like',V);
 MU2 = zeros(1000,1,'like',V);
 EE = zeros(1000,1,'like',V);
@@ -59,13 +60,13 @@ while true
     i=i+1;
 %     phi = grid.ifft(ekk.*grid.fft(phi));
 %     phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     phi = grid.iffty(eky.*grid.ffty(phi));
+%     phi = grid.iffty(eky.*grid.ffty(phi)); 
     if(omega ~= 0)
         phi = grid.ifftx(ekx.*grid.fftx(phi));
         phi = grid.iffty(eky.*grid.ffty(phi));
     else
         phi = grid.ifft(ekk.*grid.fft(phi));
-    end
+    end    
     phi = exp(-tmp2*dt).*phi;
 %     phi = grid.ifft(ekk.*grid.fft(phi));
 %     if(omega ~= 0)
@@ -86,7 +87,7 @@ while true
 %     phi = grid.iffty(eky.*grid.ffty(phi));
 %     phi = grid.ifftx(ekx.*grid.fftx(phi));
 %     phi = grid.ifft(ekk.*grid.fft(phi));
-
+    
     tmp = real(phi.*conj(phi));
     if(task.Ntotal > 0)
         mu = sqrt(task.Ntotal/grid.integrate(tmp));
@@ -95,17 +96,16 @@ while true
         mu = exp(task.mu_init*dt);
         MU(i) = grid.integrate(tmp*mu^2);
     end
-    phi=phi*mu;
+    phi1=abs(phi1).*exp(1i*(angs+angle(phi2)))*mu;
     tmp = tmp*mu^2;
     tmp2 = tmp.*g+V;
-    task.current_state = phi;
 %     imagesc(abs(phi));drawnow;
     if(nargout >= 3)
         MU2(i) = real(grid.inner(phi,task.applyham(phi)));
     end
     if(nargout >= 4)
         EE(i) = task.get_energy(phi)/task.Ntotal;
-    end
+    end    
 
     if(i>50 && mod(i,10) == 0)
         delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt/MU(i);
@@ -117,12 +117,12 @@ while true
                 ekk = exp(-grid.kk*0.5*dt);
                 if(omega ~= 0)
                     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
-                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);
+                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);                
                 end
             end
         end
     end
-
+    
     if(i>=50000)
         warning('Convergence not reached');
         break;

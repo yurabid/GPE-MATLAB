@@ -5,13 +5,13 @@ function  obj = init( obj, varargin )
 if length( varargin ) == 1
   %  treat input as grid arrays
   x = (varargin{ 1 });
+  nx = numel( x );
 else
   %  construct arrays
   x = (linspace( -varargin{ 1 }, varargin{ 1 }, varargin{ 2 } ));
+  nx = varargin{ 2 };
 end
 
-%  number of grid points
-nx = numel( x );
 obj.nx = nx;
 %  spatial increment
 dx = x( 2 ) - x( 1 );
@@ -20,7 +20,7 @@ dx = x( 2 ) - x( 1 );
 obj.x = x;
 
 %%  wavevectors and operators in reciprocal space
-obj.kx = ([ (0:nx/2) -(nx/2-1:-1:1)]*pi/x(end));
+obj.kx = ([ (0:nx/2) -(nx/2-1:-1:1)]*2*pi/(x(end)-x(1)+dx));
 
 obj.kk = (obj.kx.^2)/2;
 

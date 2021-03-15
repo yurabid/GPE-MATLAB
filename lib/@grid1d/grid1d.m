@@ -1,4 +1,4 @@
-classdef grid1d < gridBase
+classdef grid1d < handle
   %  Three-dimensional grid for solution of non-linear Schroedinger equation.
   
 %%  Properties
@@ -6,9 +6,11 @@ classdef grid1d < gridBase
     nx          %  number of x positions
     x           %  positions of grid along x
     kx
-%     weight      %  integration weight
-%     kk          %  Laplace operator in Fourier space
-%     mesh        %  meshgrid coordinates included for compatibility
+    weight      %  integration weight
+    kweight     %  integration weight in fourier space
+    kk          %  Laplace operator in Fourier space
+    mesh        %  meshgrid coordinates
+    ndims       %  number of dimensions
   end
   
 %%  Methods
@@ -25,8 +27,10 @@ classdef grid1d < gridBase
       %    xmax   :  largest  grid points (smallest points are symmetric)
       %    nx     :  number of points 
       %  initialization
-      obj.ndims = 1;
-      obj = init( obj, varargin{ : } );
+      if nargin>0
+        obj.ndims = 1;
+        obj = init( obj, varargin{ : } );
+      end
     end
   
     function disp( obj )

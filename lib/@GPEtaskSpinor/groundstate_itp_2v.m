@@ -1,4 +1,4 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps,phi)
+function [phi, varargout] = groundstate_itp_2v(task,dt,eps,x0,phi)
 % groundstate_itp - Calculate the stationary state of multicomponent GPE with split-step Imaginary Time Propagation method.
 %
 %  Usage :
@@ -19,11 +19,12 @@ grid = task.grid;
 omega=task.omega;
 ncomp = size(task.g,1);
 task.ncomp = ncomp;
+angs = -(atan2(grid.mesh.y,grid.mesh.x-x0) + atan2(grid.mesh.y,grid.mesh.x+x0))+pi;
 VV = task.getVtotal(0);
 V = VV{1};
 coupl = task.coupling;
 g = task.g;
-if(nargin <= 3)
+if(nargin <= 4)
     phi = cellfun(@(x) grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V))./sqrt(ncomp), cell(1,ncomp), 'UniformOutput', false);
 end
 ekk = exp(-grid.kk*dt*0.5);
@@ -83,9 +84,10 @@ while true
     mu = sqrt(task.Ntotal/ntot);
     MU(i) = log(mu)/dt;
     dts(i) = dt;
-    for j =1:ncomp
-        phi{j}=phi{j}.*mu;
-    end
+%     for j =1:ncomp
+    phi{1}=abs(phi{1}).*exp(1i*(angs-angle(phi{2}))).*mu;
+    phi{2}=phi{2}.*mu;
+%     end
     task.current_state = phi;
     
     if(nargout >= 3)
@@ -104,22 +106,22 @@ while true
         if(delta < eps)
             break;
         end
-        if(delta<dt*0.001 || delta < eps)
-            if (dt<eps || dt<5e-6)
-                break;
-            else
-                dt = dt/1.5;
-                ekk = exp(-grid.kk*dt*0.5);
-                if(omega ~= 0)
-                    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
-                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);
-                end                 
-                cosom = cosh(dt*abs(coupl));
-                sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
-                sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
-                iswitch = i;
-            end
-        end
+%         if(delta<dt*0.001 || delta < eps)
+%             if (dt<eps || dt<5e-6)
+%                 break;
+%             else
+%                 dt = dt/1.5;
+%                 ekk = exp(-grid.kk*dt*0.5);
+%                 if(omega ~= 0)
+%                     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
+%                     eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);
+%                 end                 
+%                 cosom = cosh(dt*abs(coupl));
+%                 sinomm = sinh(dt*abs(coupl)).*exp(-1i*cang);
+%                 sinomp = sinh(dt*abs(coupl)).*exp(1i*cang);
+%                 iswitch = i;
+%             end
+%         end
     end
     if(i>=500000)
         warning('Convergence not reached');
