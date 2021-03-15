@@ -1,12 +1,12 @@
 # GPE-MATLAB
-MATLAB solver and tools for modeling of Gross-Pitaevskii equation
+MATLAB solvers and tools for modeling of Gross-Pitaevskii equation and related physical problems
 
 
 
 
 MIT License
 
-Copyright (c) [year] [fullname]
+Copyright (c) 2015-2021 Yuriy Bidasyuk
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
