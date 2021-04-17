@@ -14,7 +14,7 @@ There are two main types of objects in the project. In general, for any calculat
 Solver objects mostly inlude two main types of methods: groundstate methods (start with 'groundstate_') and dynamics methods (start with 'solve_').
 Difference between methods of the same type is mostly in the algorithms used to solve the equation.
 
-### Some usage examples:
+### Basic usage example:
 ```matlab
 % Initialization
 
@@ -54,6 +54,16 @@ task.solve_split(tstep,steps_int,steps_ext); % run the calculation
 
 ```
 
+### CUDA support:
+Most generic solvers `GPUtask` and `GPUtaskSpinor` can also run on GPU (with MATLAB parallel computing toolbox).
+To do this you need to initialize your grid with GPU arrays. For example
+
+```matlab
+xmax = 10;
+N = 256;
+x = gpuArray.linspace(-xmax,xmax,N);
+grid = grid2d(x,x);
+```
 ---------------------
 
 Copyright (c) 2015-2021 Yuriy Bidasyuk, [yurabid@gmail.com](mailto:yurabid@gmail.com) (MIT License)
