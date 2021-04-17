@@ -30,6 +30,10 @@ function dispstat(obj,TXT,varargin)
 %     this wont be overwriten
 %     final stat
 
+% Copyright: kasim tasdemir (2021). Overwritable message outputs to commandline window
+% (https://www.mathworks.com/matlabcentral/fileexchange/44673-overwritable-message-outputs-to-commandline-window),
+% MATLAB Central File Exchange. Retrieved April 17, 2021.
+
 % **********
 % **** Options
 keepthis = 0; % option for not overwriting

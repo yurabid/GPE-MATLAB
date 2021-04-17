@@ -1,4 +1,5 @@
 function k = gamma_coef(mu,ecut,temp)
+% Computes gamma coefficient for SPGPE
 k=0;
 beta = 1/temp;
 for i=1:100
