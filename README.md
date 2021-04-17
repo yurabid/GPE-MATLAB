@@ -5,6 +5,15 @@ Simple and extensible MATLAB solvers and tools for solving the Gross-Pitaevskii 
 ### Installation: 
 Add `lib` folder to MATLAB path (with subfolders).
 
+### Structure of the package
+There are two main types of objects in the project. In general, for any calculation you need one form each type.
+
+1. Grid objects (class names start with 'grid') are used to define spatial grid for discretization of your solutions.
+2. Solver objects (class names end with 'task') are used to calculare and analyze GPE and other related equations. These solvers can (mostly) work with any of the grid object type
+
+Solver objects mostly inlude two main types of methods: groundstate methods (start with 'groundstate_') and dynamics methods (start with 'solve_').
+Difference between methods of the same type is mostly in the algorithms used to solve the equation.
+
 ### Some usage examples:
 ```matlab
 % Initialization
@@ -47,5 +56,4 @@ task.solve_split(tstep,steps_int,steps_ext); % run the calculation
 
 ---------------------
 
-Copyright (c) 2015-2021 Yuriy Bidasyuk (MIT License)
-
+Copyright (c) 2015-2021 Yuriy Bidasyuk, [yurabid@gmail.com](mailto:yurabid@gmail.com) (MIT License)

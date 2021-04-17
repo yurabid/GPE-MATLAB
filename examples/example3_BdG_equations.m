@@ -1,4 +1,4 @@
-%% Initialization (mostly the same for all examples here)
+%% Initialization
 
 units % load some common physical constants
 omegar = 150*2*pi; % trap frequencies (150Hz and 600Hz)
@@ -21,15 +21,12 @@ tstep = 0.02; % initial time step for imaginary time evolution
 acc = 1e-6; % desired accuracy
 phi = task.groundstate_itp(tstep,acc); % phi will contain calculated stationary state
 
-%% Vortex dynamics calculation
+%% Calculation of the Bogoliubov-de Gennes collective excitations spectrum
 
-xi = 1/sqrt(2*task.g*max(abs(phi(:))).^2); % healing length
-x0 = 5; %vortex position
-rr = sqrt((grid.mesh.x-x0).^2 + grid.mesh.y.^2);
-angs = atan2(grid.mesh.x-x0,grid.mesh.y);
-task.init_state = phi.*tanh(rr./xi).^1.*exp(1i*angs); % imprint a vortex on the stationary state
-tstep = 0.004; % time step for calculation
-steps_int = 50; % number of (internal) time steps in one (external) processing step
-steps_ext = 500; % number of (external) processing steps
-task.show_image = 1; % show the solution on every precessing step
-task.solve_split(tstep,steps_int,steps_ext); % run the calculation
+bdg = BDGtask(task); % solver for BdG equations. It uses GPEtask as an input
+[vv,sp]=bdg.solve(50); % calculate 50 lowest Bogoliubov modes
+
+%%
+
+% Solution contains both functions u and v from the solution. We plot only one of them
+imagesc(real(bdg.reshape_1ton(vv(1:end/2,45)))); % show the shape of the mode #45. 
