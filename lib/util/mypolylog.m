@@ -1,4 +1,4 @@
-function [y, errors] = polylog(n,z) 
+ function [y, errors] = mypolylog(n,z) 
 %% polylog - Computes the n-based polylogarithm of z: Li_n(z)
 
 if nargin~=2

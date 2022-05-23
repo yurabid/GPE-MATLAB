@@ -1,4 +1,4 @@
-classdef GPEtaskRing < handle
+classdef GPEtask < handle
     %GPEtask - Solution of the Gross-Pitaevsii equation
     
     properties
@@ -30,7 +30,7 @@ classdef GPEtaskRing < handle
     end
     
     methods
-        function obj = GPEtaskRing(grid,trappot)
+        function obj = GPEtask(grid,trappot)
             obj.grid = grid;
             obj.init_state = zeros(size(grid.mesh.r),'like',grid.r);
             if(isa(trappot,'function_handle'))

@@ -1,4 +1,4 @@
-classdef ogrid3dring2 < handle
+classdef ogrid3d < handle
   %  Three-dimensional grid for solution of non-linear Schroedinger equation.
   
 %%  Properties
@@ -44,7 +44,7 @@ classdef ogrid3dring2 < handle
 %%  Methods
   methods
     
-    function obj = ogrid3dring2( omr, r0, omz, ecut, grid_factor )
+    function obj = ogrid3d( omr, r0, omz, ecut, grid_factor )
       %  Initialize 3D grid.
       %
       %  Usage :

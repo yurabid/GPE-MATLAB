@@ -27,7 +27,6 @@ if(nargin <= 3)
 end
 MU = zeros(5000,1,'like',V);
 MU2 = zeros(5000,1,'like',V);
-dts = zeros(5000,1,'like',V);
 EE = zeros(5000,1,'like',V);
 delta = 1;
 i = 1;
@@ -68,9 +67,7 @@ while true
     phi1=phi1.*mu;
     phi2=phi2.*mu;
     
-
-    MU(i) = log(mu)/dt;
-    dts(i) = dt;    
+    MU(i) = (mu-1)/dt;  
     
     if(nargout >= 3)
         MU2(i) = real(task.inner(phi,task.applyham(phi)))/task.Ntotal;

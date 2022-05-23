@@ -1,4 +1,4 @@
-classdef PGPEtaskRing < GPEtask
+classdef PGPEtask < GPEtask
     %PGPEtask - Solution of the projected Gross-Pitaevsii equation
     
     properties
@@ -10,7 +10,7 @@ classdef PGPEtaskRing < GPEtask
     end
     
     methods
-        function obj = PGPEtaskRing(grid,trappot)
+        function obj = PGPEtask(grid,trappot)
             obj = obj@GPEtask(grid,trappot);
         end
         function res = applyham(obj,phi,time,phir)

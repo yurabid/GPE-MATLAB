@@ -57,9 +57,7 @@ i = 0;
 tmp2 = real(phi.*conj(phi)).*g+V;
 while true
     i=i+1;
-%     phi = grid.ifft(ekk.*grid.fft(phi));
-%     phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     phi = grid.iffty(eky.*grid.ffty(phi));
+
     if(omega ~= 0)
         phi = grid.ifftx(ekx.*grid.fftx(phi));
         phi = grid.iffty(eky.*grid.ffty(phi));
@@ -67,25 +65,13 @@ while true
         phi = grid.ifft(ekk.*grid.fft(phi));
     end
     phi = exp(-tmp2*dt).*phi;
-%     phi = grid.ifft(ekk.*grid.fft(phi));
-%     if(omega ~= 0)
-%         lphi = phi;
-%         for ii = 1:n_cn
-%             lphi = phi + dt*omega*grid.lz(lphi);
-%             lphi = 0.5*(phi+lphi);
-%         end
-%         phi = phi + dt*omega*grid.lz(lphi);
-%     end
-%     phi = exp(-tmp2*dt*0.5).*phi;
+
     if(omega ~= 0)
         phi = grid.ifftx(ekx.*grid.fftx(phi));
         phi = grid.iffty(eky.*grid.ffty(phi));
     else
         phi = grid.ifft(ekk.*grid.fft(phi));
     end
-%     phi = grid.iffty(eky.*grid.ffty(phi));
-%     phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     phi = grid.ifft(ekk.*grid.fft(phi));
 
     tmp = real(phi.*conj(phi));
     if(task.Ntotal > 0)
@@ -99,7 +85,7 @@ while true
     tmp = tmp*mu^2;
     tmp2 = tmp.*g+V;
     task.current_state = phi;
-%     imagesc(abs(phi));drawnow;
+
     if(nargout >= 3)
         MU2(i) = real(grid.inner(phi,task.applyham(phi)));
     end

@@ -1,4 +1,4 @@
-classdef grid3dring < grid2dring
+classdef grid3d < ring.grid2d
   %  Three-dimensional grid for solution of non-linear Schroedinger equation.
   
 %%  Properties
@@ -11,7 +11,7 @@ classdef grid3dring < grid2dring
 %%  Methods
   methods
     
-    function obj = grid3dring( varargin )
+    function obj = grid3d( varargin )
       %  Initialize 2D polar grid.
       %
       %  Usage :

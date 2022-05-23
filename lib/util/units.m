@@ -14,3 +14,9 @@ aRB11 = 100.4*a0;
 aRB22 = 95.44*a0;
 aRB12 = 98.006*a0;
 
+
+% Hyperfine sodium-23 states PRA 97, 063615 (2018) 
+% |1,1> and |1,-1>
+aNA11 = 54.54*a0;
+aNA12 = 50.78*a0;
+
