@@ -25,7 +25,7 @@ nz = grid.nz/2;
 V = task.getVtotal(0);
 g = task.g;
 omega = task.omega;
-n_cn=task.n_crank;
+% n_cn=task.n_crank;
 
 if(task.Ntotal > 0)
     NN0 = task.Ntotal;
@@ -51,26 +51,28 @@ end
 nt = zeros(size(grid_nt.mesh.x),'like',V);
 tmpext = task.vtrap_nt;%zeros(size(grid_nt.mesh.x),'like',V);
 NNN = NN0;
-NNt = 0;
+% NNt = 0;
 ekk = exp(-grid.kk*dt);
+if(omega ~= 0)
+    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/2*dt);
+    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/2*dt);
+end
 MU = zeros(1000,1,'like',V);
 MU2 = zeros(1000,1,'like',V);
-delta = 1;
-mu_old = 0;
-i = 1;
-
+% delta = 1;
+% mu_old = 0;
+i = 0;
 tmp2 = real(phi.*conj(phi))*g+V;
-while (delta > eps || mod(i,10)~=5)
+while true %(delta > eps || mod(i,10)~=5)
+    i=i+1;
     phi = exp(-tmp2*dt*0.5).*phi;
-    phi = grid.ifft(ekk.*grid.fft(phi));
-        if(omega ~= 0)
-            lphi = phi;
-            for ii = 1:n_cn
-                lphi = phi + dt*omega*grid.lz(lphi);
-                lphi = 0.5*(phi+lphi);
-            end
-            phi = phi + dt*omega*grid.lz(lphi);
-        end
+    if(omega ~= 0)
+        phi = grid.ifftx(ekx.*grid.fftx(phi));
+        phi = grid.iffty(eky.*grid.ffty(phi));
+    else
+        phi = grid.ifft(ekk.*grid.fft(phi));
+    end
+
     phi = exp(-tmp2*dt*0.5).*phi;
     
 	tmp = real(phi.*conj(phi));
@@ -85,8 +87,8 @@ while (delta > eps || mod(i,10)~=5)
     ncur = grid.integrate(tmp);
     if(task.Ntotal > 0)
         mu = sqrt(NNN/ncur);
-        MU(i) = mu;
         ncur = ncur*mu^2;
+        MU(i) = log(mu)/dt;
     else
         mu = exp(task.mu_init*dt);
         ncur = ncur*mu^2;
@@ -95,43 +97,48 @@ while (delta > eps || mod(i,10)~=5)
     phi=phi*mu;
 	tmp = tmp*mu^2;
 	tmp2 = tmp*g+V;
-    MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + tmp.*(tmp2+2*g*nt(nx+1:3*nx,ny+1:3*ny,nz+1:3*nz))));
-    if(omega ~= 0)
-        MU2(i) = MU2(i) - omega*real(grid.integrate(conj(phi).*grid.lz(phi)));
-    end
+    MU2(i) = real(grid.inner(phi,task.applyham(phi,nt)));
     MU2(i) = MU2(i)/ncur;
     if(mod(i,10)==0)%i>150)
-		if(TT>0)
-		    tmpext(nx+1:3*nx,ny+1:3*ny,nz+1:3*nz) = V + 2*g*tmp;
-            mmu = min(MU2(i),min(min(min(tmpext + 2*g*nt)))-1e-10); % compensate for possibly inaccurate chem. pot. calculation
-            
-		    ntt=(TT/(2*pi))^1.5*polylog(1.5,exp((mmu - tmpext - 2*g*nt)/TT)); % averaging increases stability for high temperatures
-		    if(NNN<=1 && task.Ntotal > 0)
-		        NNt = grid_nt.integrate(ntt);
-		        nt = (nt+ntt*NN0/NNt)*0.5;
-		    else
-		        nt=(nt+ntt)*0.5;
-		    end
-		end
-        if(task.Ntotal > 0)
-            delta = abs(log(mu_old/mu))/dt^2/9;
-        else
-            delta = abs(MU(i)-mu_old)/dt/9;
+        if(TT>0)
+            tmpext(nx+1:3*nx,ny+1:3*ny,nz+1:3*nz) = V + 2*g*tmp;
+            % mmu = min(MU2(i),min(min(min(tmpext + 2*g*nt)))-1e-10); % compensate for possibly inaccurate chem. pot. calculation
+            ntt=(TT/(2*pi))^1.5*mypolylog(1.5,exp((MU2(i) - tmpext - 2*g*nt)/TT)); % averaging increases stability for high temperatures
+            ntt = ntt.*isfinite(ntt);
+            if(NNN<=1 && task.Ntotal > 0)
+                NNt = grid_nt.integrate(ntt);
+                nt = (nt+ntt*NN0/NNt)*0.5;
+            else
+                nt=(nt+ntt)*0.5;
+            end
         end
-        mu_old = MU(i-9);
+        
     end
 	tmp2 = tmp2 + 2*g*nt(nx+1:3*nx,ny+1:3*ny,nz+1:3*nz);
-    i=i+1;
+    if(i>50 && mod(i,10) == 5)
+        delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt/MU(i);
+        if(delta < eps)
+            if (dt<eps*10 || dt<1e-4)
+                break;
+            else
+                dt = dt/1.5;
+                ekk = exp(-grid.kk*dt);
+                if(omega ~= 0)
+                    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/2*dt);
+                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/2*dt);
+                end
+            end
+        end
+    end
     if(i>=10000) 
         warning('Convergence not reached');
         break;
     end
 end
-i=i-1;
+% i=i-1;
 if(nargout >= 2)
     MU = real(MU(1:nnz(MU)));
     if(task.Ntotal > 0)
-        MU = 1/dt * log(MU);
         task.current_mu = MU(end);
         task.current_n = task.Ntotal;
     end

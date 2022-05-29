@@ -19,8 +19,6 @@ grid = task.grid;
 V = task.getVtotal(0);
 task.V0 = V;
 g = task.g*task.Ntotal;
-% omega = task.omega;
-% n_cn=task.n_crank;
 if(nargin <= 3)
     phi = grid.normalize(rand(size(grid.etot),'like',V) + 1i*rand(size(grid.etot),'like',V));
 else
@@ -29,32 +27,46 @@ end
 ekk = exp(-grid.etot*dt*0.5);
 MU = zeros(1000,1,'like',V);
 MU2 = zeros(1000,1,'like',V);
-delta = 1;
-mu_old = 0;
-i = 1;
+EE = zeros(1000,1,'like',V);
 
-while delta > eps
-    
+i = 0;
+phir = grid.sp2grid(phi);
+tmp = abs(phir.^2);
+
+while true %delta > eps
+    i=i+1;
+   
     phi = ekk.*phi;
     phir = grid.sp2grid(phi);
-    phir = exp(-(V+g*abs(phir.^2))*dt).*phir;
+    phir = exp(-(V+g*tmp)*dt).*phir;
     phi = grid.grid2sp(phir);
     phi = ekk.*phi;
-    
+
     mu = sqrt(1.0/sum(abs(grid.to1d(phi.^2))));
-    MU(i) = mu;
+    MU(i) = log(mu)/dt;
     
     phi=phi*mu;
     phir = grid.sp2grid(phi);
+    tmp = abs(phir.^2);
 
     if(nargout >= 3)
-        MU2(i) = real(sum(grid.to1d(grid.etot.*abs(phi).^2 + conj(phi).*(grid.grid2sp((V+g*abs(phir.^2)).*phir)))));
+        h1 = real(sum(grid.to1d(grid.etot.*abs(phi).^2 + conj(phi).*(grid.grid2sp(V.*phir)))));
+        h2 = real(sum(conj(phi).*(grid.grid2sp(g*tmp.*phir))));
+        MU2(i) = h1+h2;
+        EE(i) = h1+h2/2;
     end
-    if(i>50)
-        delta = abs(log(mu_old/mu))/dt^2/10;
-        mu_old = MU(i-10);
+    if((i)>50 && mod(i,10) == 0)
+%         delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt/MU(i);
+        delta = abs((MU(i)-MU(i-10))^2/(MU(i)-2*MU(i-10)+MU(i-20)))/MU(i);
+        if(delta < eps)
+            if (dt<eps || dt<1e-5)
+                break;
+            else
+                dt = dt/1.2;
+                ekk = exp(-grid.etot*dt*0.5);
+            end
+        end
     end
-    i=i+1;
     if(i>=10000)
         warning('Convergence not reached');
         break;
@@ -63,12 +75,15 @@ end
 
 if(nargout >= 2)
     MU = MU(1:nnz(MU));
-    MU = 1/dt * log(MU);
     varargout{1} = MU;
 end
 if(nargout >= 3)
     MU2 = MU2(1:nnz(MU2));
     varargout{2} = MU2;
+end
+if(nargout >= 4)
+    EE = EE(1:nnz(EE));
+    varargout{3} = EE;
 end
 phi = phi * sqrt(task.Ntotal);
 task.init_state = phi;

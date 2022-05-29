@@ -65,11 +65,7 @@ classdef GPEtask < handle
                 time = obj.current_time;
             end
             res = obj.getVtotal(time).*phi + obj.g.*abs(phi).^2.*phi;
-%             if(obj.omega ~= 0)
-%                 res = res - obj.omega*obj.grid.lz(phi);
-%             end
             if(obj.omega ~= 0)
-%                 res = res - obj.omega*obj.grid.lz(phi);
                 res = res + obj.grid.lap(phi,obj.omega);
             else
                 res = res + obj.grid.lap(phi);
@@ -82,7 +78,6 @@ classdef GPEtask < handle
             end
             res = obj.getVtotal(time).*phi;
             if(obj.omega ~= 0)
-%                 res = res - obj.omega*obj.grid.lz(phi);
                 res = res + obj.grid.lap(phi,obj.omega);
             else
                 res = res + obj.grid.lap(phi);

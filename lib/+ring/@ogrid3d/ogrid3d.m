@@ -57,8 +57,7 @@ classdef ogrid3d < handle
 		obj.ecut = ecut;
 		obj.nsr = gather(ceil((ecut+0.5)/omr));
         pindmax = gather(ceil(sqrt(2*ecut)*r0));
-		obj.nsphi = 2*pindmax+1;
-%         obj.nsphi = 1;
+		obj.nsphi = 2*pindmax;
 		obj.nsz = gather(ceil((ecut+0.5)/omz));
         
         obj.nr = 2*(obj.nsr-1);
@@ -73,18 +72,13 @@ classdef ogrid3d < handle
         obj.r = obj.r + r0;
         obj.x = obj.r;
         obj.wr = obj.wr.*obj.r.*(obj.r>0);
-%         [obj.y, obj.wy] = obj.gauss_hermite_wrap(obj.ny,grid_factor*omy);
         obj.phi = linspace(0,2*pi,obj.nphi+1);
         obj.phi = obj.phi(1:end-1);
         obj.wphi = (obj.phi(2)-obj.phi(1));
         [obj.z, obj.wz] = obj.gauss_hermite_wrap(obj.nz,grid_factor*omz);
         
-%         obj.wx = obj.wx.*(obj.wx>1e-30);
-%         obj.wy = obj.wy.*(obj.wy>1e-30);
-%         obj.wz = obj.wz.*(obj.wz>1e-30);
-        
         obj.transr = obj.trans2r(obj.r-r0,obj.nsr,obj.omr);%/sqrt(r0);
-        obj.transphi = obj.trans2plane(obj.phi,pindmax);
+%         obj.transphi = obj.trans2plane(obj.phi,pindmax);
         obj.transz = obj.trans2(obj.z,obj.nsz,obj.omz);
         obj.rmat = (spdiags([sqrt((0:obj.nsr-1)'/2),(1:obj.nsr)'*0+r0,sqrt((1:obj.nsr)'/2)],[1,0,-1],obj.nsr,obj.nsr))^(-1);
         obj.drmat = (spdiags([-sqrt((0:obj.nsr-1)'/2),sqrt((1:obj.nsr)'/2)],[1,-1],obj.nsr,obj.nsr));
@@ -93,10 +87,6 @@ classdef ogrid3d < handle
 		obj.nstates = obj.nsr*obj.nsphi*obj.nsz;
         obj.npoints = obj.nr*obj.nphi*obj.nz;
 
-%         [y,x,z] = meshgrid(obj.y,obj.x,obj.z);
-%         [y2, x2] = meshgrid(obj.y, obj.x);
-%         [wy,wx,wz] = meshgrid(obj.wy,obj.wx,obj.wz);
-%         obj.mesh = struct( 'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2, 'wx', wx, 'wy', wy, 'wz', wz);
         [phi,r,z] = meshgrid(obj.phi,obj.r,obj.z);
         x = r.*cos(phi);
         y = r.*sin(phi);
@@ -108,14 +98,15 @@ classdef ogrid3d < handle
         obj.mesh = struct( 'r',r,'phi',phi,'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2, 'wr', wr, 'wphi', wphi, 'wz', wz);
 
         obj.wtot = wr.*wphi.*wz; %.*exp(grid_factor*(omx*x.^2+omy*y.^2+omz*z.^2));
+        ks = [ (0:obj.nphi/2), -(obj.nphi/2-1:-1:1)];
         [i,j,k] = ind2sub([obj.nsr, obj.nsphi, obj.nsz],(1:obj.nstates));
         obj.etot = (obj.to3d(omr*(i-0.5) + omz*(k-0.5)));% + (obj.to3d( (j-pindmax-1).^2/2 ));
-        obj.kphi = (obj.to3d( (j-pindmax-1) ));
-        obj.etotphi = (obj.to3d( (j-pindmax-1).^2/2 ));
+        obj.kphi = (obj.to3d( ks(j) ));
+        obj.etotphi = (obj.to3d( ks(j).^2/2 ));
         obj.mask = obj.etot+(obj.etotphi-1/8)/r0^2 <= ecut+0.5;
         [i,j,k] = ind2sub([obj.nr, obj.nsphi, obj.nsz],(1:obj.nr*obj.nsphi*obj.nsz));
 %         obj.rdphimat = reshape(((j-pindmax-1).^2-1/4)/2./r0^2,[obj.nr, obj.nsphi, obj.nsz]);
-        obj.rdphimat = reshape(((j-pindmax-1).^2-1/4)/2./obj.r(i).^2,[obj.nr, obj.nsphi, obj.nsz]);
+        obj.rdphimat = reshape((ks(j).^2-1/4)/2./obj.r(i).^2,[obj.nr, obj.nsphi, obj.nsz]);
     end
   
     function disp( obj )
@@ -211,8 +202,9 @@ classdef ogrid3d < handle
         res = permute(reshape(res,[obj.nsz,obj.nsphi,obj.nsr]),[3 2 1]).*obj.mask;
     end   
     function res = ifftzphi(obj,phi)
-        res = reshape(permute(phi,[1 3 2]),[obj.nr*obj.nsz,obj.nsphi])*obj.transphi';       
-        res = reshape(permute(reshape(res,[obj.nr,obj.nsz,obj.nphi]),[1 3 2]),[obj.nr*obj.nphi,obj.nsz])*obj.transz.';
+%         res = reshape(permute(phi,[1 3 2]),[obj.nr*obj.nsz,obj.nsphi])*obj.transphi';
+        res = ifft(phi,obj.nphi,2)/sqrt(2*pi)*obj.nphi;
+        res = reshape(res,[obj.nr*obj.nphi,obj.nsz])*obj.transz.';
         res = reshape(res,[obj.nr,obj.nphi,obj.nz]);
     end
 %     function res = fftzphi(obj,phi)
@@ -227,27 +219,30 @@ classdef ogrid3d < handle
 %     end
     function res = fftzphi(obj,phi)
         res = reshape(phi.*obj.wtot,[obj.nr*obj.nphi,obj.nz])*obj.transz;        
-        res = reshape(permute(reshape(res,[obj.nr,obj.nphi,obj.nsz]),[1 3 2]),[obj.nr*obj.nsz,obj.nphi])*obj.transphi;
-        res = permute(reshape(res,[obj.nr,obj.nsz,obj.nsphi]),[1 3 2]);
+%         res = reshape(permute(reshape(res,[obj.nr,obj.nphi,obj.nsz]),[1 3 2]),[obj.nr*obj.nsz,obj.nphi])*obj.transphi;
+        res = fft(reshape(res,[obj.nr,obj.nphi,obj.nsz]),obj.nphi,2)/sqrt(2*pi);
+%         res = permute(reshape(res,[obj.nr,obj.nsz,obj.nsphi]),[1 3 2]);
     end         
     function res = grid2sp(obj,phi)
-        res = obj.grid2sp_inner(phi.*obj.wtot);
+        res = obj.grid2sp_inner(phi);
     end
     function res = applyh0(obj,phi)
-        res = obj.etot.*phi + obj.fftr(obj.rdphimat.*obj.ifftr(phi));
+        res = obj.etot.*phi + obj.fftr(obj.rdphimat.*obj.ifftr(phi).*obj.wr');
     end
     function res = grid2sp_inner(obj,phi)
-        res = reshape(permute(phi,[2 3 1]),[obj.nphi*obj.nz,obj.nr])*obj.transr;
-        res = reshape(permute(reshape(res,[obj.nphi,obj.nz,obj.nsr]),[3 2 1]),[obj.nsr*obj.nz,obj.nphi])*obj.transphi;        
-        res = reshape(permute(reshape(res,[obj.nsr,obj.nz,obj.nsphi]),[1 3 2]),[obj.nsr*obj.nsphi,obj.nz])*obj.transz;
-        res = reshape(res,[obj.nsr,obj.nsphi,obj.nsz]).*obj.mask;
+%         res = reshape(permute(phi,[2 3 1]),[obj.nphi*obj.nz,obj.nr])*obj.transr;
+%         res = reshape(permute(reshape(res,[obj.nphi,obj.nz,obj.nsr]),[3 2 1]),[obj.nsr*obj.nz,obj.nphi])*obj.transphi;        
+%         res = reshape(permute(reshape(res,[obj.nsr,obj.nz,obj.nsphi]),[1 3 2]),[obj.nsr*obj.nsphi,obj.nz])*obj.transz;
+%         res = reshape(res,[obj.nsr,obj.nsphi,obj.nsz]).*obj.mask;
+        res = obj.fftr(obj.fftzphi(phi));
     end
 
     function res = sp2grid(obj,phi)
-        res = reshape(permute(phi,[2 3 1]),[obj.nsphi*obj.nsz,obj.nsr])*obj.transr.';
-        res = reshape(permute(reshape(res,[obj.nsphi,obj.nsz,obj.nr]),[3 2 1]),[obj.nr*obj.nsz,obj.nsphi])*obj.transphi';       
-        res = reshape(permute(reshape(res,[obj.nr,obj.nsz,obj.nphi]),[1 3 2]),[obj.nr*obj.nphi,obj.nsz])*obj.transz.';
-        res = reshape(res,[obj.nr,obj.nphi,obj.nz]);
+%         res = reshape(permute(phi,[2 3 1]),[obj.nsphi*obj.nsz,obj.nsr])*obj.transr.';
+%         res = reshape(permute(reshape(res,[obj.nsphi,obj.nsz,obj.nr]),[3 2 1]),[obj.nr*obj.nsz,obj.nsphi])*obj.transphi';       
+%         res = reshape(permute(reshape(res,[obj.nr,obj.nsz,obj.nphi]),[1 3 2]),[obj.nr*obj.nphi,obj.nsz])*obj.transz.';
+%         res = reshape(res,[obj.nr,obj.nphi,obj.nz]);
+        res = obj.ifftzphi(obj.ifftr(phi));
     end
     function res = sp2grid_arb(obj,f,r,phi,z)
         dim = [length(r) length(phi) length(z)];

@@ -19,11 +19,31 @@ classdef ZNGtask < GPEtask
             obj.vtrap_nt = trappot(obj.grid_nt.mesh.x,obj.grid_nt.mesh.y,obj.grid_nt.mesh.z);
         end
         
-        function extend(obj,phi1,phi2)
+        function res=extend(obj,phi)
             nx = obj.grid.nx/2;
             ny = obj.grid.ny/2;
             nz = obj.grid.nz/2;
-            phi2(nx+1:3*nx,ny+1:3*ny,nz+1:3*nz) = phi1;
+            res=zeros(4*nx,4*ny,4*nz,'like',obj.grid.x);
+            res(nx+1:3*nx,ny+1:3*ny,nz+1:3*nz) = phi;
+        end
+        
+        function res=shrink(obj,phi)
+            nx = obj.grid.nx/2;
+            ny = obj.grid.ny/2;
+            nz = obj.grid.nz/2;
+            res=phi(nx+1:3*nx,ny+1:3*ny,nz+1:3*nz);
+        end
+        
+        function res = applyham(obj,phi,nt,time)
+            if(nargin==3)
+                time = obj.current_time;
+            end
+            res = obj.getVtotal(time).*phi + obj.g.*(abs(phi).^2 + 2*obj.shrink(nt)).*phi;
+            if(obj.omega ~= 0)
+                res = res + obj.grid.lap(phi,obj.omega);
+            else
+                res = res + obj.grid.lap(phi);
+            end
         end
     end
   
