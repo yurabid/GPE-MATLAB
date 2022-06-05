@@ -16,23 +16,23 @@ function [phi, varargout] = groundstate_besp(task,dt,eps,phi)
 %    mu2      :  array of chemical potential from integral evaluation
 
 grid = task.grid;
-ncomp = size(task.g,1);
-task.ncomp = ncomp;
+% ncomp = size(task.g,1);
+% task.ncomp = ncomp;
 VV = task.getVtotal(0);
 V = VV{1};
-coupl = task.coupling;
+% coupl = task.coupling;
 g = task.g;
 if(nargin <= 3)
-    phi = cellfun(@(x) grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V))./sqrt(ncomp), cell(1,ncomp), 'UniformOutput', false);
+    phi = cellfun(@(x) grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V))./sqrt(2), cell(1,2), 'UniformOutput', false);
 end
-MU = zeros(5000,1,'like',V);
+MU1 = zeros(5000,1,'like',V);
 MU2 = zeros(5000,1,'like',V);
 EE = zeros(5000,1,'like',V);
-delta = 1;
+% delta = 1;
 i = 1;
 iswitch = 20;
 eps2=eps*100;
-tmp2 = cell(1,ncomp);
+tmp2 = cell(1,2);
 
 while true
     tmp2{1} = VV{1} + g(1,1)*abs(phi{1}).^2 + g(1,2)*abs(phi{2}).^2;%.*conj(phi{k}));
@@ -46,34 +46,38 @@ while true
 	phi1hat = grid.fft(phi{1});
     phi2hat = grid.fft(phi{2});
     
-	g1hat = grid.fft((alpha-tmp2{1}).*phi{1}-coupl.*phi{2});
-    g2hat = grid.fft((alpha-tmp2{2}).*phi{2}-conj(coupl).*phi{1});
-	phi1 = grid.ifft((phi1hat+dt*g1hat)./(1+dt*(alpha+grid.kk)));
-    phi2 = grid.ifft((phi2hat+dt*g2hat)./(1+dt*(alpha+grid.kk)));
+	g1hat = grid.fft((alpha-tmp2{1}).*phi{1});
+    g2hat = grid.fft((alpha-tmp2{2}).*phi{2});
+	phi1 = grid.ifft((phi1hat+dt*g1hat)./(1+dt*(alpha+grid.kk/task.M1)));
+    phi2 = grid.ifft((phi2hat+dt*g2hat)./(1+dt*(alpha+grid.kk/task.M2)));
     
     delta=1;
     while delta>eps2
-        g1hat = grid.fft((alpha-tmp2{1}).*phi1-coupl.*phi2);
-        g2hat = grid.fft((alpha-tmp2{2}).*phi2-conj(coupl).*phi1);
-        phi11 = grid.ifft((phi1hat+dt*g1hat)./(1+dt*(alpha+grid.kk)));
-        phi22 = grid.ifft((phi2hat+dt*g2hat)./(1+dt*(alpha+grid.kk)));
+        g1hat = grid.fft((alpha-tmp2{1}).*phi1);
+        g2hat = grid.fft((alpha-tmp2{2}).*phi2);
+        phi11 = grid.ifft((phi1hat+dt*g1hat)./(1+dt*(alpha+grid.kk/task.M1)));
+        phi22 = grid.ifft((phi2hat+dt*g2hat)./(1+dt*(alpha+grid.kk/task.M2)));
         delta = max(abs([phi1(:)-phi11(:);phi2(:)-phi22(:)]));
         phi1 = phi11;
         phi2 = phi22;
     end
 
-    ntot = real(grid.integrate(phi1.*conj(phi1) + phi2.*conj(phi2)));
-    mu = sqrt(task.Ntotal/ntot);
-    phi1=phi1.*mu;
-    phi2=phi2.*mu;
+    n1c = real(grid.integrate(phi1.*conj(phi1)));
+    n2c = real(grid.integrate(phi2.*conj(phi2)));
+    mu1 = sqrt(task.N1/n1c);
+    mu2 = sqrt(task.N2/n2c);
     
-    MU(i) = (mu-1)/dt;  
+    phi1=phi1.*mu1;
+    phi2=phi2.*mu2;
     
-    if(nargout >= 3)
-        MU2(i) = real(task.inner(phi,task.applyham(phi)))/task.Ntotal;
-    else
-        MU2(i) = MU(i);
-    end
+    MU1(i) = (mu1-1)/dt; 
+    MU2(i) = (mu2-1)/dt; 
+    
+%     if(nargout >= 3)
+%         MU2(i) = real(task.inner(phi,task.applyham(phi)))/task.Ntotal;
+%     else
+%         MU2(i) = MU1(i);
+%     end
     if(nargout >= 4)
         EE(i) = task.get_energy(phi)/task.Ntotal;
     else
@@ -102,8 +106,8 @@ while true
 end
 
 if(nargout >= 2)
-    MU = MU(1:i-1);
-    varargout{1} = MU;
+    MU1 = MU1(1:i-1);
+    varargout{1} = MU1;
 end
 if(nargout >= 3)
     MU2 = MU2(1:i-1);

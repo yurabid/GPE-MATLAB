@@ -37,7 +37,7 @@ dts = zeros(5000,1,'like',V);
 EE = zeros(5000,1,'like',V);
 delta = 1;
 i = 1;
-iswitch = 50;
+iswitch = 20;
 
 tmp2 = cell(1,ncomp);
 cang = angle(coupl);
@@ -98,13 +98,13 @@ while true
     else
         EE(i) = MU2(i);
     end
-
-    if((i-iswitch)>200 && mod(i,10) == 0)
+% plot(EE);drawnow;
+    if((i-iswitch)>10 && mod(i,10) == 0)
         delta = (abs(EE(i)-EE(i-9))/9 + abs(EE(i)-EE(i-1)))/dt;
+%         if(delta < eps)
+%             break;
+%         end
         if(delta < eps)
-            break;
-        end
-        if(delta<dt*0.001 || delta < eps)
             if (dt<eps || dt<5e-6)
                 break;
             else

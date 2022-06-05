@@ -1,19 +1,23 @@
-classdef GPEtaskSpinor < GPEtask
-    %Solution of the two-component Gross-Pitaevsii equation with coherent
-    %coupling between the components
+classdef GPEtask2comp < GPEtask
+    %Solution of the two-component Gross-Pitaevsii equation for inceherent
+    %mixture of two condensates
     
-    properties
-		coupling=0        % Inter-component coupling (Rabi frequency)
-        nlincpl=0
-        ncomp=0           % Number of components      
+    properties 
+        N1 % number of atoms in component 1
+        N2 % number of atoms in component 2
+        mu1 % chemical potential of component 1
+        mu2 % chemical potential of component 2
+        M1=1 % atom mass of component 1
+        M2=1 % atom mass of component 2
+        ncomp=2
     end
     
     methods
-        function obj = GPEtaskSpinor(grid,trappot)
+        function obj = GPEtask2comp(grid,trappot)
             obj = obj@GPEtask(grid,trappot);
             if(isa(trappot,'cell'))
-                obj.ncomp = numel(trappot);
-                for i=1:obj.ncomp
+                ncomp = numel(trappot);
+                for i=1:ncomp
                     if(isa(trappot{i},'function_handle'))
                         obj.Vtrap{i} = trappot{i}(grid.mesh.x,grid.mesh.y,grid.mesh.z);
                     end
@@ -27,17 +31,9 @@ classdef GPEtaskSpinor < GPEtask
             elseif(time == 0 && numel(obj.V0)>1)
                 v = obj.V0;
             elseif(isa(obj.Vtd,'function_handle'))
-                v = cell(1,obj.ncomp);
-                for i=1:obj.ncomp
-%                     v{i} = bsxfun(@plus,obj.Vtrap{i},obj.Vtd(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
-                    v{i} = obj.Vtrap{i} + obj.Vtd(obj,time);
-                end
+                v = {obj.Vtrap{1} + obj.Vtd(obj,time), obj.Vtrap{2} + obj.Vtd(obj,time)};
             elseif(isa(obj.Vtd,'cell'))
-                v = cell(1,obj.ncomp);
-                for i=1:obj.ncomp
-%                     v{i} = bsxfun(@plus,obj.Vtrap{i},obj.Vtd{i}(obj.grid.mesh.x2,obj.grid.mesh.y2,time));
-                    v{i} = obj.Vtrap{i} + obj.Vtd{i}(obj,time);
-                end
+                v = {obj.Vtrap{1} + obj.Vtd{1}(obj,time), obj.Vtrap{2} + obj.Vtd{2}(obj,time)};
             else
                 v = obj.Vtrap;
             end
@@ -62,13 +58,6 @@ classdef GPEtaskSpinor < GPEtask
                 res = res + obj.g(j,k)*abs(phi{k}).^2;
             end
             res = res.*phi{j} + obj.grid.lap(phi{j});
-%             for k=1:obj.ncomp
-                if(j==1)
-                    res = res + obj.coupling.*phi{2};
-                else
-                    res = res + conj(obj.coupling).*phi{1};
-                end
-%             end
             if(obj.omega ~= 0)
                 res = res - obj.omega*obj.grid.lz(phi{j});
             end            

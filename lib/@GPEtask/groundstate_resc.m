@@ -1,5 +1,7 @@
-function [phi, varargout] = groundstate(task,eps,phi0)
-% groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
+function [phi, varargout] = groundstate_resc(task,eps,phi0)
+% Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
+% Experimental approach using rescaling of all quantities and automatic
+% selection of the initial time step
 %
 %  Usage :
 %    phi = task.groundstate_itp(dt,eps)

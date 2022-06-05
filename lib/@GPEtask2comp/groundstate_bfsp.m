@@ -1,5 +1,5 @@
-function [phi, varargout] = groundstate_besp(task,dt,eps,phi)
-% groundstate_itp - Calculate the stationary state of multicomponent GPE with BESP Imaginary Time Propagation method.
+function [phi, varargout] = groundstate_bfsp(task,dt,eps,phi)
+% groundstate_itp - Calculate the stationary state of multicomponent GPE with split-step Imaginary Time Propagation method.
 %
 %  Usage :
 %    phi = task.groundstate_itp(dt,eps)
@@ -27,11 +27,11 @@ if(nargin <= 3)
 end
 MU = zeros(5000,1,'like',V);
 MU2 = zeros(5000,1,'like',V);
+dts = zeros(5000,1,'like',V);
 EE = zeros(5000,1,'like',V);
-delta = 1;
 i = 1;
-iswitch = 20;
-eps2=eps*100;
+iswitch = 50;
+
 tmp2 = cell(1,ncomp);
 
 while true
@@ -51,23 +51,14 @@ while true
 	phi1 = grid.ifft((phi1hat+dt*g1hat)./(1+dt*(alpha+grid.kk)));
     phi2 = grid.ifft((phi2hat+dt*g2hat)./(1+dt*(alpha+grid.kk)));
     
-    delta=1;
-    while delta>eps2
-        g1hat = grid.fft((alpha-tmp2{1}).*phi1-coupl.*phi2);
-        g2hat = grid.fft((alpha-tmp2{2}).*phi2-conj(coupl).*phi1);
-        phi11 = grid.ifft((phi1hat+dt*g1hat)./(1+dt*(alpha+grid.kk)));
-        phi22 = grid.ifft((phi2hat+dt*g2hat)./(1+dt*(alpha+grid.kk)));
-        delta = max(abs([phi1(:)-phi11(:);phi2(:)-phi22(:)]));
-        phi1 = phi11;
-        phi2 = phi22;
-    end
-
     ntot = real(grid.integrate(phi1.*conj(phi1) + phi2.*conj(phi2)));
     mu = sqrt(task.Ntotal/ntot);
     phi1=phi1.*mu;
     phi2=phi2.*mu;
     
-    MU(i) = (mu-1)/dt;  
+
+    MU(i) = log(mu)/dt;
+    dts(i) = dt;    
     
     if(nargout >= 3)
         MU2(i) = real(task.inner(phi,task.applyham(phi)))/task.Ntotal;
@@ -79,18 +70,24 @@ while true
     else
         EE(i) = MU2(i);
     end
-    if i==iswitch
-        eps2=eps;
-    end
-    if((i-iswitch)>0 && mod(i,5) == 0)
+
+    if((i-iswitch)>50 && mod(i,10) == 0)
 %         delta = (abs(EE(i)-EE(i-9))/9 + abs(EE(i)-EE(i-1)))/dt;
 %         delta = abs((EE(i)-EE(i-10))^2/(EE(i)-2*EE(i-10)+EE(i-20)))/EE(i);
         delta = max(abs([phi{1}(:)-phi1(:);phi{2}(:)-phi2(:)]));
         if(delta < eps)
-            break;
+            if (dt<eps*10)
+                break;
+            else
+                dt = dt/3; 
+                iswitch = i;
+            end
         end
 
     end
+%     imagesc(abs(phi1));drawnow;
+%     phi1 = [phi1(1:end,1:end/2),conj(flip(phi1(1:end,1:end/2),2))];
+%     phi1 = [phi1(1:end/2,1:end/2),conj(flip(phi1(1:end/2,1:end/2),2));conj(flip(phi1(1:end/2,1:end/2),1)),flip(flip(phi1(1:end/2,1:end/2),1),2)];
     phi{1} = phi1;
     phi{2} = phi2;
     if(i>=50000)
@@ -98,7 +95,6 @@ while true
         break;
     end
     i=i+1;
-%     imagesc(abs(phi{1}(:,:,end/2)));drawnow;
 end
 
 if(nargout >= 2)
