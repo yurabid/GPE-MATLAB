@@ -1,19 +1,22 @@
 function [phi, varargout] = groundstate_besp(task,dt,eps,phi)
-% groundstate_itp - Calculate the stationary state of multicomponent GPE with BESP Imaginary Time Propagation method.
-%
-%  Usage :
-%    phi = task.groundstate_itp(dt,eps)
-%    phi = task.groundstate_itp(dt,eps,phi0)
-%    [phi, mu] = task.groundstate_itp(dt,eps)
-%    [phi, mu, mu2] = task.groundstate_itp(dt,eps)
+% groundstate_itp - Calculate the stationary state of 2-component GPE 
+% with BESP Imaginary Time Propagation method.
+
+% Based on:
+% Bao, W., Chern, I.L. and Lim, F.Y., 2006. Efficient and spectrally accurate 
+% numerical methods for computing ground and first excited states in 
+% Bose–Einstein condensates. Journal of Computational Physics, 219(2), pp.836-854.
+
+
 %  Input
 %    dt    :  evolution time step
 %    eps   :  desired accuracy (applied to chemical potential)
-%    phi0  :  initial approximation of the wave function
+%    phi0  :  (optional) initial approximation of the wave function
 %  Output
 %    phi      :  calculated stationary state
-%    mu       :  array of chemical potential values during evolution
-%    mu2      :  array of chemical potential from integral evaluation
+%    mu       :  (optional) history of chemical potential values during evolution
+%    mu2      :  (optional) history of chemical potential from integral evaluation
+%    E        :  (optional) history of total energy values
 
 grid = task.grid;
 ncomp = size(task.g,1);

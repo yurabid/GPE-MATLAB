@@ -1,5 +1,5 @@
 function ret = lap(obj,phi,omega)
-if(nargin <= 2)
+if(nargin <= 2 || omega==0)
 	ret = obj.ifft(obj.kk.*obj.fft(phi));
 else
 	ret = obj.ifftx((obj.kx.^2/2-obj.kx.*obj.mesh.y*omega).*obj.fftx(phi)) + ...

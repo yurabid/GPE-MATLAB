@@ -67,16 +67,16 @@ while true
         phi{1} = grid.ifft(ekk1.*grid.fft(phi{1}));
         phi{2} = grid.ifft(ekk2.*grid.fft(phi{2}));
     end
-    tmp2{1} = exp(-tmp2{1}*dt).*phi{1} ;
-    tmp2{2} = exp(-tmp2{2}*dt).*phi{2} ;
-    if(omega ~= 0)
+    phi{1} = exp(-tmp2{1}*dt).*phi{1} ;
+    phi{2} = exp(-tmp2{2}*dt).*phi{2} ;
+    if(omega ~= 0)        
         phi{1} = grid.iffty(eky1.*grid.ffty(phi{1}));
-        phi{1} = grid.ifftx(ekx1.*grid.fftx(tmp2{1}));
-        phi{2} = grid.iffty(eky2.*grid.ffty(phi{2}));        
-        phi{2} = grid.ifftx(ekx2.*grid.fftx(tmp2{2}));
+        phi{1} = grid.ifftx(ekx1.*grid.fftx(phi{1}));
+        phi{2} = grid.iffty(eky2.*grid.ffty(phi{2})); 
+        phi{2} = grid.ifftx(ekx2.*grid.fftx(phi{2})); 
     else
-        phi{1} = grid.ifft(ekk1.*grid.fft(tmp2{1}));
-        phi{2} = grid.ifft(ekk2.*grid.fft(tmp2{2}));
+        phi{1} = grid.ifft(ekk1.*grid.fft(phi{1}));
+        phi{2} = grid.ifft(ekk2.*grid.fft(phi{2}));
     end
     
     n1c = real(grid.integrate(phi{1}.*conj(phi{1})));
@@ -108,7 +108,7 @@ while true
 %     imagesc(abs(phi{2}));
 %     subplot(2,2,4);
 %     plot([MU1(max(i-200,1):i),MU2(max(i-200,1):i)]);
-%     imagesc(angle(phi{2}));
+% %     imagesc(angle(phi{2}));
 %     drawnow;
     if((i-iswitch)>10 && mod(i,10) == 0)
         delta = (abs(EE(i)-EE(i-9))/9 + abs(EE(i)-EE(i-1)))/dt;

@@ -43,10 +43,10 @@ classdef GPEtask2comp < GPEtask
                 time = obj.current_time;
             end
             v=obj.getVtotal(time);
-            res = obj.grid.lap(phi) + v{j}.*phi;
-            if(obj.omega ~= 0)
-                res = res - obj.omega*obj.grid.lz(phi);
-            end
+            res = obj.grid.lap(phi,obj.omega) + v{j}.*phi;
+%             if(obj.omega ~= 0)
+%                 res = res - obj.omega*obj.grid.lz(phi);
+%             end
         end        
         function res = applyham1c(obj,phi,j,time)
             if(nargin==3)
@@ -57,10 +57,10 @@ classdef GPEtask2comp < GPEtask
             for k=1:obj.ncomp
                 res = res + obj.g(j,k)*abs(phi{k}).^2;
             end
-            res = res.*phi{j} + obj.grid.lap(phi{j});
-            if(obj.omega ~= 0)
-                res = res - obj.omega*obj.grid.lz(phi{j});
-            end            
+            res = res.*phi{j} + obj.grid.lap(phi{j},obj.omega);
+%             if(obj.omega ~= 0)
+%                 res = res - obj.omega*obj.grid.lz(phi{j});
+%             end            
         end
         
         function res = applyham(obj,phi,time)
@@ -71,6 +71,23 @@ classdef GPEtask2comp < GPEtask
             for j =1:obj.ncomp
                 res{j} = obj.applyham1c(phi,j,time);
             end
+        end
+        
+        function res = get_mu(obj,phi,time)
+            if(nargin==1)
+                phi = obj.current_state;
+            end  
+            if(nargin<=2)
+                time = obj.current_time;
+            end            
+            res = cell(1,obj.ncomp);
+            res{1} = real(obj.grid.inner(phi{1},obj.applyham1c(phi,1,time))/obj.N1);
+            res{2} = real(obj.grid.inner(phi{2},obj.applyham1c(phi,2,time))/obj.N2);
+        end
+        
+       
+        function res = toND(obj,phi)
+            res = reshape(phi,size(obj.grid.mesh.x));
         end
         
         function res = inner(obj,left,right)
@@ -85,6 +102,7 @@ classdef GPEtask2comp < GPEtask
             res{1} = res{1}*a;
             res{2} = res{2}*a;
         end
+        
         
         function res = get_energy(obj,phi,time)
             if(nargin<3)
