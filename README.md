@@ -24,6 +24,10 @@ The list of available solvers for easier navigation:
 
 - GPEtaskSpinor -- same as GPEtask but for two-component coherently coupled condensates. The coherent coupling can be space-dependent and complex, allowing to simulate spin-orbit-coupled systems.
 
+- GPPEtask -- Solver for Gross-Pitaevskii-Poisson system of equations
+
+- GPPEbartask -- Solver for Gross-Pitaevskii-Poisson system of equations + self-consistent calculation of Newtonian dynamics of an external particle gravitationally interacting with the condensate. 
+
 
 ### Basic usage example:
 ```matlab
