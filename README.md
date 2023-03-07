@@ -13,11 +13,16 @@ There are two main types of objects in the project. In general, for any calculat
 
 Solver objects mostly inlude two main types of methods: groundstate methods (start with 'groundstate_') and dynamics methods (start with 'solve_').
 Difference between methods of the same type is mostly in the algorithms used to solve the equation.
+
 The list of available solvers for easier navigation:
-GPEtask - Solver for a basic Gross-Pitaevskii equation. It is possible to add phenomenological damping to simulate energy dissipation or set up time-dependent external potentials.
-PGPEtask - Projected Gross-Pitaevskii equation. Uses oscillator basis representation and restricted to three-dimensional simulations only. It is possible to add damping and noise to run Stochastic Projected Gross-Pitaevskii equation for finite-temperature simulations.
-GPEtask2comp - same as GPEtask but for two-component condensate mixtures.
-GPEtaskSpinor - same as GPEtask but for two-component coherently coupled condensates. The coherent coupling can be space-dependent and complex, allowing to simulate spin-orbit-coupled systems.
+
+- GPEtask -- Solver for a basic Gross-Pitaevskii equation. It is possible to add phenomenological damping to simulate energy dissipation or set up time-dependent external potentials.
+
+- PGPEtask -- Projected Gross-Pitaevskii equation. Uses oscillator basis representation and restricted to three-dimensional simulations only. It is possible to add damping and noise to run Stochastic Projected Gross-Pitaevskii equation for finite-temperature simulations.
+
+- GPEtask2comp -- same as GPEtask but for two-component condensate mixtures.
+
+- GPEtaskSpinor -- same as GPEtask but for two-component coherently coupled condensates. The coherent coupling can be space-dependent and complex, allowing to simulate spin-orbit-coupled systems.
 
 
 ### Basic usage example:
