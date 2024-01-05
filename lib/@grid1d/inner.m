@@ -9,4 +9,4 @@ function y = inner( obj, lhs, rhs )
 %  Output
 %    y      :  integrated inner product
 
-y = integrate( obj, conj( lhs ) .* rhs );
+y = obj.integrate(conj( lhs ) .* rhs);

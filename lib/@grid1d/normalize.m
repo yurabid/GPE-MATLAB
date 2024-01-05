@@ -10,7 +10,7 @@ function [ psi, n ] = normalize( obj, psi )
 %    n      :  norm of wavefunction
 
 %  norm
-n = norm( obj, psi );
+n = obj.norm(psi);
 %  normalize wavefunction
 psi = psi * diag( 1 ./ n );
 

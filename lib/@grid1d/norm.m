@@ -8,4 +8,4 @@ function n = norm( obj, psi )
 %  Output
 %    n      :  norm of wavefunction
 
-n = sqrt( integrate( obj, abs( psi ) .^ 2 ) );
+n = sqrt(obj.integrate(abs(psi).^2));

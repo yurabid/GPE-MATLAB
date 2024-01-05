@@ -1,6 +1,6 @@
 function ret = lz(obj,phi,r0)
-%% Calculates action of the Lz operator on the arbitrary state phi
-%% Optioanal argumant r0 allows to set the coordinates of the center
+% Calculates action of the Lz operator on the arbitrary state phi
+% Optioanal argumant r0 allows to set the coordinates of the center
 
     if(nargin<=2)
         r0=[0,0];

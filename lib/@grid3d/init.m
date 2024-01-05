@@ -1,5 +1,5 @@
 function  obj = init( obj, varargin )
-%  INIT - Initialize 3D grid.
+%  Initialize 3D grid.
 
 %%  set up real space grid from input
 if length( varargin ) == 3
@@ -29,7 +29,7 @@ dz = z( 2 ) - z( 1 );
 %  save grid to object
 [ obj.x, obj.y, obj.z ] = deal( x, y, z );
 
-%%  wavevectors and operators in reciprocal space
+%  wavevectors and operators in reciprocal space
 kx = ([ (0:nx/2) -(nx/2-1:-1:1)]*2*pi/(x(end)-x(1)+dx));
 ky = ([ (0:ny/2) -(ny/2-1:-1:1)]*2*pi/(y(end)-y(1)+dy));
 kz = ([ (0:nz/2) -(nz/2-1:-1:1)]*2*pi/(z(end)-z(1)+dz));
@@ -37,11 +37,9 @@ kz = ([ (0:nz/2) -(nz/2-1:-1:1)]*2*pi/(z(end)-z(1)+dz));
 [ obj.kx, obj.ky, obj.kz ] = meshgrid( kx, ky, kz );
 obj.kk = (obj.kx.^2+obj.ky.^2+obj.kz.^2)/2;
 
-%%  meshgrid coordinates
-%  mesh grid data 
+%  meshgrid coordinates
 [ x, y, z ] = meshgrid( x, y, z );
 [x2, y2] = meshgrid(obj.x, obj.y);
 %  save meshgrid structure
 obj.mesh = struct( 'x', x, 'y', y, 'z', z, 'x2', x2, 'y2', y2 );
-
 obj.weight = dx*dy*dz;
