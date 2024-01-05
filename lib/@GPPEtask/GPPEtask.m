@@ -39,6 +39,9 @@ classdef GPPEtask < GPEtask
             end
             res = (obj.getVtotal(time)+obj.Fi(1:end-1,1:end-1,1:end-1)).*phi + obj.g.*abs(phi).^2.*phi;
             res = res + obj.grid.lap(phi);
+            if(obj.omega ~= 0)
+                res = res - obj.omega*obj.grid.lz(phi);
+            end
         end
 
         function res = applyh0(obj,phi,time)
@@ -47,6 +50,9 @@ classdef GPPEtask < GPEtask
             end
             res = (obj.getVtotal(time)+obj.Fi(1:end-1,1:end-1,1:end-1)).*phi;
             res = res + obj.grid.lap(phi);
+            if(obj.omega ~= 0)
+                res = res - obj.omega*obj.grid.lz(phi);
+            end            
         end
         function res = get_kin_energy(obj,phi)
             res = real(obj.grid.inner(phi,obj.grid.lap(phi)));
