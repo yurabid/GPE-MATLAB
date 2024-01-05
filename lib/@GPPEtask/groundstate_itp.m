@@ -38,11 +38,11 @@ if(nargin<=4)
     tc=0;
 end
 
-ekk = exp(-grid.kk*0.5*dt);
-if(omega ~= 0)
-    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
-    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);
-end    
+ekk = exp(-grid.kk*dt);
+% if(omega ~= 0)
+%     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
+%     eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);
+% end    
 MU = zeros(1000,1,'like',grid.mesh.x);
 MU2 = zeros(1000,1,'like',grid.mesh.x);
 EE = zeros(1000,1,'like',grid.mesh.x);
@@ -53,20 +53,29 @@ tmp2 = real(phi.*conj(phi)).*g+task.Fi(1:end-1,1:end-1,1:end-1)+V;
 while true
     i=i+1;
 
+%     if(omega ~= 0)
+%         phi = grid.ifftx(ekx.*grid.fftx(phi));
+%         phi = grid.iffty(eky.*grid.ffty(phi));
+%     else
+%         phi = grid.ifft(ekk.*grid.fft(phi));
+%     end
+    phi = exp(-tmp2*dt*0.5).*phi;
+    phi = grid.ifft(ekk.*grid.fft(phi));
     if(omega ~= 0)
-        phi = grid.ifftx(ekx.*grid.fftx(phi));
-        phi = grid.iffty(eky.*grid.ffty(phi));
-    else
-        phi = grid.ifft(ekk.*grid.fft(phi));
+        lphi = phi;
+        for ii = 1:3
+            lphi = phi + dt*omega.*grid.lz(lphi);
+            lphi = 0.5*(phi+lphi);
+        end
+        phi = phi + dt*omega.*grid.lz(lphi);
     end
-    phi = exp(-tmp2*dt).*phi;
-
-    if(omega ~= 0)
-        phi = grid.iffty(eky.*grid.ffty(phi));
-        phi = grid.ifftx(ekx.*grid.fftx(phi));
-    else
-        phi = grid.ifft(ekk.*grid.fft(phi));
-    end
+    phi = exp(-tmp2*dt*0.5).*phi;
+%     if(omega ~= 0)
+%         phi = grid.iffty(eky.*grid.ffty(phi));
+%         phi = grid.ifftx(ekx.*grid.fftx(phi));
+%     else
+%         phi = grid.ifft(ekk.*grid.fft(phi));
+%     end
 
     tmp = real(phi.*conj(phi));
     mu = sqrt(task.Ntotal/grid.integrate(tmp));
@@ -108,11 +117,11 @@ drawnow;
             else
                 dt = dt/1.5;
                 mgstep=mgstep*2;
-                ekk = exp(-grid.kk*0.5*dt);
-                if(omega ~= 0)
-                    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
-                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);                
-                end
+                ekk = exp(-grid.kk*dt);
+%                 if(omega ~= 0)
+%                     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
+%                     eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);                
+%                 end
             end
         end
     end
