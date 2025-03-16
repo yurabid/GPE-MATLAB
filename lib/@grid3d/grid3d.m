@@ -4,8 +4,8 @@ classdef grid3d < grid2d
 %%  Properties
   properties
     nz          %  number of z positions
-    z           %  positions of grid along z
-    kz          %  momentum grid along z      
+    z           %  positions of grid along z     
+    dz
   end
   
 %%  Methods

@@ -1,5 +1,6 @@
 function [phi, varargout] = groundstate_besp(task,dt,eps,phi0)
-% groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
+% groundstate_itp - Calculate the stationary state of GPE usin Backward
+% Euler SPectral method
 %
 %  Usage :
 %    phi = task.groundstate_itp(dt,eps)
@@ -20,8 +21,6 @@ function [phi, varargout] = groundstate_besp(task,dt,eps,phi0)
 grid = task.grid;
 V = task.getVtotal(0);
 g = task.g;
-omega = task.omega;
-% n_cn=task.n_crank;
 if(task.Ntotal > 0)
     nnn = task.Ntotal;
 else
@@ -44,11 +43,7 @@ else
     phi = sqrt(nnn)*grid.normalize(phi0);
 end
 
-%ekk = exp(-grid.kk*dt);
-%if(omega ~= 0)
-%    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
-%    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);
-%end    
+ 
 MU = zeros(1000,1,'like',V);
 MU2 = zeros(1000,1,'like',V);
 EE = zeros(1000,1,'like',V);
@@ -110,7 +105,7 @@ while true
         end
     end
     phi=phi1;
-    if(i>=50000)
+    if(i>=task.itp_max_iter)
         warning('Convergence not reached');
         break;
     end

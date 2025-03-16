@@ -1,4 +1,4 @@
-function [phi, varargout] = groundstate_itp(task,dt,eps,phi0,tc)
+function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
 % groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
 %
 %  Usage :
@@ -18,122 +18,84 @@ function [phi, varargout] = groundstate_itp(task,dt,eps,phi0,tc)
 %    mu2      :  array of chemical potential from integral evaluation
 
 grid = task.grid;
-V = task.getVtotal(0);
-g = task.g;
 h=grid.x(2)-grid.x(1);
-angs=atan2(grid.mesh.y,grid.mesh.x);
-sz = size(grid.mesh.x)+1;
-omega = task.omega;
-nnn = task.Ntotal;
+sz = grid.nx+1;
 if(nargin <= 3)
     phi0 = 'rand';
 end
 if(isa(phi0,'char'))
-    phi = sqrt(nnn)*grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(sz,'like',grid.mesh.x)); % random initial guess
+    phi = sqrt(task.Ntotal)*grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(size(grid.mesh.x),'like',grid.mesh.x)); % random initial guess
 else
-    phi = sqrt(nnn)*grid.normalize(phi0);
+    phi = sqrt(task.Ntotal)*grid.normalize(phi0);
 end
-
-if(nargin<=4)
-    tc=0;
+if(numel(task.Fi)==0)
+    task.set_pot(phi);
 end
-
-ekk = exp(-grid.kk*dt);
-% if(omega ~= 0)
-%     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
-%     eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);
-% end    
-MU = zeros(1000,1,'like',grid.mesh.x);
-MU2 = zeros(1000,1,'like',grid.mesh.x);
-EE = zeros(1000,1,'like',grid.mesh.x);
+task.current_state = phi;
+if(task.itp_use_fft_Fi)
+    kk_inv = 1./grid.kk/2;
+    kk_inv(1,1,1) = 0;
+end
+  
+task.set_kinop(dt);
+MU = zeros(task.itp_max_iter,1,'like',grid.mesh.x);
+MU2 = zeros(task.itp_max_iter,1,'like',grid.mesh.x);
+EE = zeros(task.itp_max_iter,1,'like',grid.mesh.x);
 i = 0;
-mgstep=10;
 
-tmp2 = real(phi.*conj(phi)).*g+task.Fi(1:end-1,1:end-1,1:end-1)+V;
+task.nlinop = exp(-dt*0.5*(real(phi.*conj(phi)).*task.g+task.getVtotal(0)));
 while true
     i=i+1;
+    phi = task.nlinop.*phi; 
+    phi = task.ssft_kin_step(phi,dt);
+    phi = task.nlinop.*phi;
 
-%     if(omega ~= 0)
-%         phi = grid.ifftx(ekx.*grid.fftx(phi));
-%         phi = grid.iffty(eky.*grid.ffty(phi));
-%     else
-%         phi = grid.ifft(ekk.*grid.fft(phi));
-%     end
-    phi = exp(-tmp2*dt*0.5).*phi;
-    phi = grid.ifft(ekk.*grid.fft(phi));
-    if(omega ~= 0)
-        lphi = phi;
-        for ii = 1:3
-            lphi = phi + dt*omega.*grid.lz(lphi);
-            lphi = 0.5*(phi+lphi);
-        end
-        phi = phi + dt*omega.*grid.lz(lphi);
-    end
-    phi = exp(-tmp2*dt*0.5).*phi;
-%     if(omega ~= 0)
-%         phi = grid.iffty(eky.*grid.ffty(phi));
-%         phi = grid.ifftx(ekx.*grid.fftx(phi));
-%     else
-%         phi = grid.ifft(ekk.*grid.fft(phi));
-%     end
-
-    tmp = real(phi.*conj(phi));
-    mu = sqrt(task.Ntotal/grid.integrate(tmp));
+    task.nlinop = real(phi.*conj(phi));
+    mu = sqrt(task.Ntotal/grid.integrate(task.nlinop));
     MU(i) = log(mu)/dt;
     phi=phi*mu;
-    if(tc>0)
-        phi = abs(phi).*exp(tc*1i*angs);
+    task.nlinop = task.nlinop*mu^2;
+    
+    if(mod(i,task.itp_fi_update_step) == 0)
+        if(task.itp_use_fft_Fi)
+            task.Fi = -grid.ifft(kk_inv.*grid.fft(task.nlinop));
+        else
+            task.set_pot_bc(task.nlinop);
+            [task.Fi,~] = task.V_cycle(task.Fi,task.nlinop,h,sz);
+        end
     end
-    tmp = tmp*mu^2;
-    if(mod(i,mgstep) == 5)
-        task.set_pot_bc(phi);
-        [task.Fi,~]=task.V_cycle(task.Fi,tmp+task.bar_dens,h,sz(1));
-    end
-    tmp2 = tmp.*g+task.Fi(1:end-1,1:end-1,1:end-1)+V;
-    task.current_state = phi;
-subplot(1,2,1)
-imagesc(abs(phi(:,:,128)));
-subplot(1,2,2)
-imagesc(real(task.Fi(:,:,128)));
-% subplot(2,2,3)
-% plot(EE);
-% subplot(2,2,4)
-% plot(abs(abs(task.Fi(:,128,128))));
-drawnow;
-    if(i>50 && mod(i,10) == 0)
+    task.current_iter = i;
+
+    if(i>50 && mod(i,10) == 5)
         if(nargout >= 3)
             MU2(i) = real(grid.inner(phi,task.applyham(phi)));
-    %         MU2(i) = res;
         end
         if(nargout >= 4)
             EE(i) = task.get_energy(phi)/task.Ntotal;
-%             EE(i)=max(abs(abs(phi(:))-abs(phi0(:))))/dt;
         end        
-%         delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt;
-        delta = max(abs(abs(phi(:))-abs(phi0(:))))/dt;
+
+        delta = max(abs(abs(phi(:))-abs(task.current_state(:))))/(dt*10);
+        task.current_state = phi;
         if(delta < eps)
-            if (dt<eps || dt<1e-4)
+            if (~task.itp_adjust_stepsize || dt<sqrt(eps))
                 break;
             else
-                dt = dt/1.5;
-                mgstep=mgstep*2;
-                ekk = exp(-grid.kk*dt);
-%                 if(omega ~= 0)
-%                     ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*omega)/4*dt);
-%                     eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*omega)/4*dt);                
-%                 end
+                dt = dt/2;
+                task.set_kinop(dt);
             end
         end
     end
-    phi0=phi;
-    if(i>=50000)
+    
+    task.nlinop = exp(-dt*0.5*(task.nlinop.*task.g+task.getVtotal(0)));    
+    
+    if(i>=task.itp_max_iter)
         warning('Convergence not reached');
         break;
     end
 end
 
-    task.current_mu = MU(end);
-    task.current_n = task.Ntotal;
+task.current_mu = MU(i);
+task.current_n = task.Ntotal;
     
 if(nargout >= 2)
     MU = MU(1:i);
@@ -147,6 +109,4 @@ if(nargout >= 4)
     EE = EE(1:i);
     varargout{3} = EE;
 end
-
-task.init_state = phi;
 end

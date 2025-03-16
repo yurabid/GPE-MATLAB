@@ -3,60 +3,73 @@ classdef GPPEtask < GPEtask
     % works only with 3D grids with equal dimensions
     
     properties
-        alpha=0
-        nl_amp=1
-        Fi
+        Fi                       % stored value of gravitational potential
+        use_QM_for_BC=true       % use Quadrupole momentum when calculating boundary conditions
+        jacobi_niter=2           % number of Jacobi smoothing steps
+        itp_fi_update_step=10    % ITP iterations between potential updates
+        itp_use_fft_Fi=false     % ITP calculate grav. potential using FFT
+        current_rcm              % Current center-of-mass position
+        current_qm               % Current value of QM
+        calculate_qmder=false    % Whether to calculate the third derivative of QM during evolution
+        current_qmder            % Current value of the third derivative of QM
+    end
+
+    properties (Access=protected)
         ext_kernel
-        laps={}
-        trans={}
-        sizes={}
+        jacobi_kernel
+        jacobi_central_coef
         bcind
-        current_qm
-        current_qmder
-        current_rcm
-        bar_dens
-        bar_Fi
+        bc_gridX
+        bc_gridY
+        bc_gridZ
+        grid_inds
     end
     
     methods
         function obj = GPPEtask(grid,trappot)
             obj = obj@GPEtask(grid,trappot);
-            obj.ext_kernel = zeros(3,3,'like',grid.x);
+
+            obj.ext_kernel = zeros(3,3,3,'like',grid.x);
             obj.ext_kernel(:,:,1) = [1 2 1;2 4 2;1 2 1]/8;
             obj.ext_kernel(:,:,2) = [2 4 2;4 8 4;2 4 2]/8;
             obj.ext_kernel(:,:,3) = [1 2 1;2 4 2;1 2 1]/8;  
+
+            obj.jacobi_kernel = zeros(3,3,3,'like',grid.x);
+
+            % 19-point stncil
+            % obj.jacobi_kernel(:,:,1) = [0 1 0;1 2 1;0 1 0]/24;
+            % obj.jacobi_kernel(:,:,2) = [1 2 1;2 0 2;1 2 1]/24;
+            % obj.jacobi_kernel(:,:,3) = [0 1 0;1 2 1;0 1 0]/24;
+            % obj.jacobi_central_coef = 1/4;
+            
+            % 27-point stncil
+            obj.jacobi_kernel(:,:,1) = [2 3 2;3 6 3;2 3 2]/88;
+            obj.jacobi_kernel(:,:,2) = [3 6 3;6 0 6;3 6 3]/88;
+            obj.jacobi_kernel(:,:,3) = [2 3 2;3 6 3;2 3 2]/88;
+            obj.jacobi_central_coef = 26/88;
+
             obj.bcind=zeros(size(grid.mesh.x)+1);
             obj.bcind(1,:,:)=1;obj.bcind(end,:,:)=1;
             obj.bcind(:,1,:)=1;obj.bcind(:,end,:)=1;
             obj.bcind(:,:,1)=1;obj.bcind(:,:,end)=1;
-            obj.bcind=obj.bcind(:)>0;  
-            obj.bar_dens=zeros(size(grid.mesh.x),'like',grid.mesh.x);
+            obj.bcind=obj.bcind(:)>0; 
+            xg=[obj.grid.x, obj.grid.x(end)+obj.grid.x(2)-obj.grid.x(1)];
+            [X,Y,Z]=meshgrid(xg,xg,xg);
+            obj.bc_gridX=X(obj.bcind);
+            obj.bc_gridY=Y(obj.bcind);
+            obj.bc_gridZ=Z(obj.bcind);
+
+            obj.grid_inds = 1:grid.nx;
         end
         
-        function res = applyham(obj,phi,time)
-            if(nargin==2)
-                time = obj.current_time;
-            end
-            res = (obj.getVtotal(time)+obj.Fi(1:end-1,1:end-1,1:end-1)).*phi + obj.g.*abs(phi).^2.*phi;
-            res = res + obj.grid.lap(phi);
-            if(obj.omega ~= 0)
-                res = res - obj.omega*obj.grid.lz(phi);
-            end
+        function v = getVtotal(obj,time)
+            v = obj.getVtotal@GPEtask(time) + obj.Fi(obj.grid_inds,obj.grid_inds,obj.grid_inds);
         end
 
-        function res = applyh0(obj,phi,time)
-            if(nargin==2)
-                time = obj.current_time;
-            end
-            res = (obj.getVtotal(time)+obj.Fi(1:end-1,1:end-1,1:end-1)).*phi;
-            res = res + obj.grid.lap(phi);
-            if(obj.omega ~= 0)
-                res = res - obj.omega*obj.grid.lz(phi);
-            end            
-        end
         function res = get_kin_energy(obj,phi)
             res = real(obj.grid.inner(phi,obj.grid.lap(phi)));
         end        
+
         function res = get_energy(obj,phi,time)
             if(nargin<3)
                 time = obj.current_time;
@@ -64,59 +77,71 @@ classdef GPPEtask < GPEtask
             if(nargin<2)
                 phi = obj.current_state;
             end
-            tmp = obj.g;
             tmp2 = obj.Fi;
-            obj.g = 0.5*obj.g;
             obj.Fi= obj.Fi*0.5;
-            res = real(obj.grid.inner(phi,obj.applyham(phi,time)));
-            obj.g=tmp;
+            res = obj.get_energy@GPEtask(phi,time);
             obj.Fi = tmp2;
-        end        
+        end  
+       
         function res=generate_pot(obj,phi)
-%             phi = sqrt(obj.Ntotal)*obj.grid.normalize(phi);
-            dens = abs(phi).^2+obj.bar_dens;
+            % generate monopole + quadrupole approximation
+            % for gravitational potential
+            dens = abs(phi).^2;
             Mtot = obj.grid.integrate(dens);
+            xg=[obj.grid.x, obj.grid.x(end)+obj.grid.x(2)-obj.grid.x(1)];
+            [X,Y,Z]=meshgrid(xg,xg,xg);
+            res = obj.generate_pot_inner(dens,Mtot,X,Y,Z);
+        end
+
+        function res = generate_pot_inner(obj,dens,Mtot,Xg,Yg,Zg)
+            % generate monopole + quadrupole approximation
+            % for gravitational potential (inner function)
             rcm = obj.cm_coords(dens,Mtot);
             obj.current_rcm=rcm;
-            xg=[obj.grid.x, obj.grid.x(end)+obj.grid.x(2)-obj.grid.x(1)];
-            [X,Y,Z]=meshgrid(xg-rcm(1),xg-rcm(2),xg-rcm(3));
+            X=Xg-rcm(1);
+            Y=Yg-rcm(2);
+            Z=Zg-rcm(3);
             rr = sqrt(X.^2+Y.^2+Z.^2);
             res=(-Mtot/(4*pi)./rr);
- 
-            Q = obj.quad_mom(dens,rcm);
-            obj.current_qm=Q;
-            res = res - Q(1,1)/(8*pi)./rr.^5.*X.^2;
-            res = res - Q(2,2)/(8*pi)./rr.^5.*Y.^2;
-            res = res - Q(3,3)/(8*pi)./rr.^5.*Z.^2;
-            res = res - Q(1,2)/(4*pi)./rr.^5.*X.*Y;
-            res = res - Q(1,3)/(4*pi)./rr.^5.*X.*Z;
-            res = res - Q(2,3)/(4*pi)./rr.^5.*Y.*Z;
+            if (obj.use_QM_for_BC)
+                Q = obj.quad_mom(dens,rcm);
+                obj.current_qm=Q;
+                res = res - Q(1,1)/(8*pi)./rr.^5.*X.^2;
+                res = res - Q(2,2)/(8*pi)./rr.^5.*Y.^2;
+                res = res - Q(3,3)/(8*pi)./rr.^5.*Z.^2;
+                res = res - Q(1,2)/(4*pi)./rr.^5.*X.*Y;
+                res = res - Q(1,3)/(4*pi)./rr.^5.*X.*Z;
+                res = res - Q(2,3)/(4*pi)./rr.^5.*Y.*Z;
+            end
         end
-        function set_pot(obj,phi,refine)            
+        function set_pot(obj,phi,refine) 
+            % Set gravitational potential based on arbitrary WF
             obj.Fi=obj.generate_pot(phi);
             if (nargin==3 && refine)
                 h=obj.grid.x(2)-obj.grid.x(1);
                 sz = size(obj.grid.mesh.x)+1;
-                for i=1:5
+                for i=1:10
                     [obj.Fi,~]=obj.V_cycle(obj.Fi,abs(phi).^2,h,sz(1));
                 end
             end
         end        
-        function set_pot_bc(obj,phi)
-            tmp = obj.generate_pot(phi);
-            obj.Fi(obj.bcind) = tmp(obj.bcind);
+        function set_pot_bc(obj,dens)
+            % Set boundary conditions for gravitational potential
+            obj.Fi(obj.bcind) = obj.generate_pot_inner(dens,obj.Ntotal,obj.bc_gridX,obj.bc_gridY,obj.bc_gridZ);
         end    
-        function rcm = cm_coords(obj,dens,Mtot)
+        function rcm = cm_coords(obj,dens,Mtot) 
+            % calculate center-of-mass coordinates from density
+            % distribution
             rcm=zeros(1,3,'like',dens);
-%             dens = abs(phi).^2+task.bar_dens;
             rcm(1) = obj.grid.integrate(dens.*obj.grid.mesh.x)/Mtot;
             rcm(2) = obj.grid.integrate(dens.*obj.grid.mesh.y)/Mtot;
             rcm(3) = obj.grid.integrate(dens.*obj.grid.mesh.z)/Mtot;            
             rcm=real(rcm);
         end        
         function Q = quad_mom(obj,dens,rcm)
+            % Calculate quadrupole momentum (3x3 matrix) from density
+            % distribution
             Q=zeros(3,3,'like',dens);
-%             dens = abs(phi).^2+task.bar_dens;
             X = (obj.grid.mesh.x-rcm(1));
             Y = (obj.grid.mesh.y-rcm(2));
             Z = (obj.grid.mesh.z-rcm(3));
@@ -151,56 +176,17 @@ classdef GPPEtask < GPEtask
             [phi,r] = obj.jacobi(phi,f,h,N);
         end    
         
-        function [Fi,res]=jacobi(~,Fi,f,h,N)
+        function [Fi,res]=jacobi(obj,Fi,f,h,N)
             Fi_new = Fi;
-            niter=3;% number of smoothing steps, 2 seems to be enough
-            for u=1:niter
-               Fi_new(2:N-1,2:N-1,2:N-1)=(...
-                   2*(  Fi(3:N,2:N-1,2:N-1) + Fi(1:N-2,2:N-1,2:N-1)...
-                      + Fi(2:N-1,3:N,2:N-1) + Fi(2:N-1,1:N-2,2:N-1)...
-                      + Fi(2:N-1,2:N-1,3:N) + Fi(2:N-1,2:N-1,1:N-2))...
-                   - 6*h^2*f(2:N-1,2:N-1,2:N-1)...
-                   + (Fi(3:N,3:N,2:N-1)    + Fi(1:N-2,3:N,2:N-1)...
-                   + Fi(3:N,1:N-2,2:N-1)  + Fi(1:N-2,1:N-2,2:N-1)...
-                   + Fi(2:N-1,3:N,3:N)    + Fi(2:N-1,1:N-2,3:N)...
-                   + Fi(2:N-1,3:N,1:N-2)  + Fi(2:N-1,1:N-2,1:N-2)...
-                   + Fi(3:N,2:N-1,3:N)    + Fi(3:N,2:N-1,1:N-2)...
-                   + Fi(1:N-2,2:N-1,3:N)  + Fi(1:N-2,2:N-1,1:N-2))...                  
-                   )/24; 
-               if(u<niter)
+            rhs = h^2*f(2:N-1,2:N-1,2:N-1)*obj.jacobi_central_coef;
+            for u=1:obj.jacobi_niter
+               Fi_new(2:N-1,2:N-1,2:N-1) = convn(Fi, obj.jacobi_kernel, 'valid') - rhs;
+               if(u<obj.jacobi_niter)
                     Fi=Fi_new;
                end
             end
-            res = (Fi-Fi_new)/(h^2/4);
-        end    
-
-        function [Fi,res]=jacobi2(~,Fi,f,h,N)
-            Fi_new = Fi;
-            niter=3;% number of smoothing steps, 2 seems to be enough
-            for u=1:niter
-               Fi_new(2:N-1,2:N-1,2:N-1)=(...
-                   6*(  Fi(3:N,2:N-1,2:N-1) + Fi(1:N-2,2:N-1,2:N-1)...
-                      + Fi(2:N-1,3:N,2:N-1) + Fi(2:N-1,1:N-2,2:N-1)...
-                      + Fi(2:N-1,2:N-1,3:N) + Fi(2:N-1,2:N-1,1:N-2))...
-                   - 26*h^2*f(2:N-1,2:N-1,2:N-1)...
-                   + 3*(Fi(3:N,3:N,2:N-1)    + Fi(1:N-2,3:N,2:N-1)...
-                   + Fi(3:N,1:N-2,2:N-1)  + Fi(1:N-2,1:N-2,2:N-1)...
-                   + Fi(2:N-1,3:N,3:N)    + Fi(2:N-1,1:N-2,3:N)...
-                   + Fi(2:N-1,3:N,1:N-2)  + Fi(2:N-1,1:N-2,1:N-2)...
-                   + Fi(3:N,2:N-1,3:N)    + Fi(3:N,2:N-1,1:N-2)...
-                   + Fi(1:N-2,2:N-1,3:N)  + Fi(1:N-2,2:N-1,1:N-2))...
-                   + 2*(Fi(3:N,3:N,3:N)    + Fi(1:N-2,3:N,3:N)...
-                   + Fi(3:N,3:N,1:N-2)  + Fi(1:N-2,3:N,1:N-2)...
-                   + Fi(3:N,1:N-2,3:N)    + Fi(1:N-2,1:N-2,3:N)...
-                   + Fi(3:N,1:N-2,1:N-2)  + Fi(1:N-2,1:N-2,1:N-2))...                   
-                   )/88;
-                
-               if(u<niter)
-                    Fi=Fi_new;
-               end
-            end
-            res = (Fi-Fi_new)/(h^2/88*26);
-        end          
+            res = (Fi-Fi_new)/(h^2*obj.jacobi_central_coef);
+        end           
         
         function phi=restrict(~,phi)
             phi=phi(1:2:end,1:2:end,1:2:end);
@@ -212,34 +198,5 @@ classdef GPPEtask < GPEtask
             res = convn(res,obj.ext_kernel,'same');
         end  
     end
-  
-  methods (Access = protected)         
-        function res=ext_callback(obj,phi,step,time,mu,n)
-            if(exist('snapshots','file') ~= 7)
-                mkdir('snapshots');
-            end
-            obj.current_state = phi;
-            obj.current_time = time;
-            obj.current_iter = step;
-            obj.current_mu = mu;
-            obj.history.mu(step) = mu;
-            obj.current_n = n;
-            obj.history.n(step) = n;
-            res_text='';
-
-            if(isa(obj.user_callback,'function_handle'))
-                if(nargout(obj.user_callback) ~= 0)
-                    res_text=obj.user_callback(obj);
-                else
-                    res_text='';
-                    obj.user_callback(obj);
-                end
-            end
-            ttime = toc;
-            obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
-            res = res_text;
-        end
-    end
-    
 end
 

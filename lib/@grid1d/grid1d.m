@@ -6,11 +6,13 @@ classdef grid1d < handle
     nx          %  number of x positions
     x           %  positions of grid along x
     kx
+    dx
     weight      %  integration weight
     kweight     %  integration weight in fourier space
     kk          %  Laplace operator in Fourier space
     mesh        %  meshgrid coordinates
     ndims       %  number of dimensions
+    stencil=[1,-8,0,8,-1]/12
   end
   
 %%  Methods
@@ -43,7 +45,14 @@ classdef grid1d < handle
       %  Plot function on grid.
       plot( (obj.x), (fun), varargin{ : } );
     end
-    
+
+    function df = deriv1(obj, A, dim, h)
+        kernelSize = ones(1, ndims(A));
+        kernelSize(dim) = 5;
+        shapedKernel = reshape(obj.stencil, kernelSize)/h;
+        df = convn(A, shapedKernel, 'same');
+    end
+
   end
   
   methods (Access = private)

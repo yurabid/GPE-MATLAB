@@ -6,6 +6,8 @@ classdef grid2d < grid1d
     ny          %  number of y positions
     y           %  positions of grid along y
     ky
+    dy
+    kz=0
   end
   
 %%  Methods
@@ -40,6 +42,14 @@ classdef grid2d < grid1d
       imagesc( (obj.x), (obj.y), (fun), varargin{ : } );
     end
     
+    % for compatability between 2d and 3d codes
+    function res = fftz(~, phi)
+        res = phi;
+    end
+    function res = ifftz(~, phi)
+        res = phi;
+    end
+
   end
   
   methods (Access = private)

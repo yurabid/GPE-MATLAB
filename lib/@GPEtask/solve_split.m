@@ -15,7 +15,6 @@ tic;
 grid = task.grid;
 % VV = task.getVtotal(0);
 g = task.g;
-omega = task.omega;
 if(task.Ntotal > 0)
     NN0 = task.Ntotal;
 else
@@ -23,13 +22,15 @@ else
 end
 NNN=NN0;
 gam = task.gamma;
-n_cn = task.n_crank;
 n_rec = task.n_recalc;
+if(mod(niter_inner,n_rec) ~= 0)
+    n_rec = 1;
+end
 tau = task.decay_rate;
 start = task.current_iter;
 
 dt = ddt*1i/(1+1i*gam);
-ekk = exp(-grid.kk*dt);
+task.set_kinop(dt);
 
 if(start>0)
     phi = task.current_state;
@@ -37,7 +38,7 @@ else
     phi = task.init_state;
 end
 
-tmp2 = real(phi.*conj(phi));
+task.nlinop = real(phi.*conj(phi));
 muc = real(grid.inner(phi,task.applyham(phi)))./NN0;
 if(task.mu_init > 0)
     mu = task.mu_init;
@@ -52,32 +53,25 @@ for j=start+1:niter_outer
         
         time2=time+(jj-1)*ddt*n_rec;
         VV = task.getVtotal(time2)-mu;
-        phi = exp(( - VV - g.*tmp2)*dt*0.5).*phi;
+        task.nlinop = exp(( - VV - g.*task.nlinop)*dt*0.5);
+        phi = task.nlinop.*phi;
         % main SMALL cycle starts here
         for i=1:n_rec
-            phi = grid.ifft(ekk.*grid.fft(phi));
-            if(omega ~= 0)
-                lphi = phi;
-                for ii = 1:n_cn
-                    lphi = phi + dt*omega*grid.lz(lphi);
-                    lphi = 0.5*(phi+lphi);
-                end
-                phi = phi + dt*omega*grid.lz(lphi);
-            end
-            
-            phi = exp(( - VV - g.*phi.*conj(phi))*dt).*phi;
+            phi = task.ssft_kin_step(phi,dt);
+            task.nlinop = exp(( - VV - g.*phi.*conj(phi))*dt);
+            phi = task.nlinop.*phi;
         end
+        task.nlinop = exp((VV + g.*phi.*conj(phi))*dt*0.5);
+        phi = task.nlinop.*phi;
+        task.nlinop = real(phi.*conj(phi));
         
-        phi = exp((VV + g.*phi.*conj(phi))*dt*0.5).*phi;
-        tmp2 = real(phi.*conj(phi));
-        
-        ncur = grid.integrate(tmp2);
+        ncur = grid.integrate(task.nlinop);
         if(gam>0 && task.mu_init == 0)
             if(tau >0)
                 NNN = NN0*exp(-time2/tau);
             end                
             phi = phi*sqrt(NNN/ncur);
-            tmp2 = tmp2*(NNN/ncur);
+            task.nlinop = task.nlinop*(NNN/ncur);
             muc = real(grid.inner(phi,task.applyham(phi,time2)))/NNN;
             mu = muc;
         else

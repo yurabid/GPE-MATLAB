@@ -33,7 +33,7 @@ delta = 1;
 mu_old = 0;
 i = 1;
 tmp2 = real(phi.*conj(phi));
-while delta > eps && i<5000
+while delta > eps && i<task.itp_max_iter
 
     lphi = phi;
     for ii = 1:n_cn

@@ -8,4 +8,4 @@ function fun = ifftz( obj, ifun )
 %  Output
 %    fun    :  function values in real space
 
-fun = ifft(ifun, obj.ny, 3);
+fun = ifft(ifun, obj.nz, 3);

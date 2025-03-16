@@ -1,5 +1,6 @@
 function [phi, varargout] = groundstate_bfsp(task,dt,eps,phi0)
-% groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
+% groundstate_itp - Calculate the stationary state of GPE usin
+% Backward-Forward variation of Euler Spectral method
 %
 %  Usage :
 %    phi = task.groundstate_itp(dt,eps)
@@ -20,8 +21,6 @@ function [phi, varargout] = groundstate_bfsp(task,dt,eps,phi0)
 grid = task.grid;
 V = task.getVtotal(0);
 g = task.g;
-omega = task.omega;
-% n_cn=task.n_crank;
 if(task.Ntotal > 0)
     nnn = task.Ntotal;
 else
@@ -44,11 +43,6 @@ else
     phi = sqrt(nnn)*grid.normalize(phi0);
 end
 
-%ekk = exp(-grid.kk*dt);
-%if(omega ~= 0)
-%    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
-%    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);
-%end    
 MU = zeros(1000,1,'like',V);
 MU2 = zeros(1000,1,'like',V);
 EE = zeros(1000,1,'like',V);
@@ -64,10 +58,6 @@ while true
 	phihat = grid.fft(phi);
 	ghat = grid.fft((alpha-tmp2).*phi);
 	phi = grid.ifft((phihat+dt*ghat)./(1+dt*(alpha+grid.kk)));
-%    phi = grid.ifft(ekk.*grid.fft(phi));   
-%    phi = exp(-tmp2*dt).*phi;
-%    phi = grid.ifft(ekk.*grid.fft(phi));
-
     
     tmp = real(phi.*conj(phi));
     if(task.Ntotal > 0)
@@ -80,7 +70,7 @@ while true
     phi=phi*mu;
     tmp = tmp*mu^2;
     tmp2 = tmp.*g+V;
-%     imagesc(abs(phi));drawnow;
+
     if(nargout >= 3)
         MU2(i) = real(grid.inner(phi,task.applyham(phi)));
     else
@@ -97,20 +87,11 @@ while true
 %         delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt/MU(i);
         delta = abs((EE(i)-EE(i-10))^2/(EE(i)-2*EE(i-10)+EE(i-20)))/EE(i);
         if(delta < eps)
-            if (dt<eps)
-                break;
-            else
-                dt = dt/1.5;
-%                ekk = exp(-grid.kk*0.5*dt);
-%                if(omega ~= 0)
-%                    ekx = exp(-(grid.kx.^2-2*grid.kx.*grid.mesh.y*task.omega)/4*dt);
-%                    eky = exp(-(grid.ky.^2+2*grid.ky.*grid.mesh.x*task.omega)/4*dt);                
-%                end
-            end
+            break;
         end
     end
     
-    if(i>=50000)
+    if(i>=task.itp_max_iter)
         warning('Convergence not reached');
         break;
     end

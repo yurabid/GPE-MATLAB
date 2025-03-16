@@ -1,5 +1,5 @@
 function ifun = fftz( obj, fun )
-%  FFT - Fast Fourier transform on grid.
+%  FFT - Fast Fourier transform on the grid.
 %
 %  Usage for obj = grid3d :
 %    ifun = fft( obj, fun )
@@ -8,4 +8,4 @@ function ifun = fftz( obj, fun )
 %  Output
 %    ifun   :  function values in reciprocal space
 
-ifun = fft(fun, obj.ny, 3);
+ifun = fft(fun, obj.nz, 3);

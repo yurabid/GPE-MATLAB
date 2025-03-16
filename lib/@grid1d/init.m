@@ -14,15 +14,15 @@ end
 
 obj.nx = nx;
 %  spatial increment
-dx = x( 2 ) - x( 1 );
+obj.dx = x( 2 ) - x( 1 );
 
 %  save grid to object
 obj.x = x;
 
 %  wavevectors and operators in reciprocal space
-obj.kx = ([ (0:nx/2) -(nx/2-1:-1:1)]*2*pi/(x(end)-x(1)+dx));
+obj.kx = ([ (0:nx/2) -(nx/2-1:-1:1)]*2*pi/(x(end)-x(1)+obj.dx));
 obj.kk = (obj.kx.^2)/2;
 
 %  save meshgrid structure
 obj.mesh = struct( 'x', x, 'y', 0, 'z', 0, 'x2', x, 'y2', 0 );
-obj.weight = dx;
+obj.weight = obj.dx;

@@ -23,15 +23,19 @@ classdef GPEtask < handle
         current_n          % current number of particles
         history            % history of current values
         user_callback      % user-defined callback function to process data after each step
+        itp_max_iter=5000  % ITP maximum iterations
+        fftw_set_wisdom=true
+        itp_adjust_stepsize=false
         % real time propagation properties
         dt                 % time step for history arrays
         totalTime          % total evolution time
         show_image = 0     % show density image on each time step
-        spectrum_w
-        spectrum_u
-        spectrum_v
     end
-
+    properties (Access=protected)
+        kinop
+        kinop2
+        nlinop
+    end
     methods
         function obj = GPEtask(grid,trappot)
             obj.grid = grid;
@@ -47,6 +51,11 @@ classdef GPEtask < handle
             end
             obj.dispstat('','init');
             obj.history = struct('mu',zeros(1,0,'like',grid.x),'n',zeros(1,0,'like',grid.x));
+            if (obj.fftw_set_wisdom)
+                fftw('dwisdom',[]);
+                fftw('planner','measure');
+                fftn(grid.mesh.x);
+            end
         end
 
         function v = getVtotal(obj,time)
@@ -64,12 +73,7 @@ classdef GPEtask < handle
             if(nargin==2)
                 time = obj.current_time;
             end
-            res = obj.getVtotal(time).*phi + obj.g.*abs(phi).^2.*phi;
-            if(obj.omega ~= 0)
-                res = res + obj.grid.lap(phi,obj.omega);
-            else
-                res = res + obj.grid.lap(phi);
-            end
+            res = obj.applyh0(phi,time) + obj.g.*abs(phi).^2.*phi;
         end
 
         function res = applyh0(obj,phi,time)
@@ -77,11 +81,14 @@ classdef GPEtask < handle
                 time = obj.current_time;
             end
             res = obj.getVtotal(time).*phi;
-            if(obj.omega ~= 0)
+            if(isscalar(obj.omega) && obj.omega ~= 0)
                 res = res + obj.grid.lap(phi,obj.omega);
             else
                 res = res + obj.grid.lap(phi);
             end
+            if(~isscalar(obj.omega))
+                res = res - obj.omega.*obj.grid.lz(phi);
+            end 
         end
 
         function res = get_energy(obj,phi,time)
