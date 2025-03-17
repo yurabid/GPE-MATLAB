@@ -70,7 +70,7 @@ task.solve_split(tstep,steps_int,steps_ext); % run the calculation
 ```
 
 ### CUDA support:
-Most generic solvers `GPEtask` and `GPEtaskSpinor` can also run on GPU (with MATLAB parallel computing toolbox).
+Most generic solvers `GPEtask`, `GPPEtask` and `GPEtaskSpinor` can also run on GPU (with MATLAB parallel computing toolbox).
 To do this you need to initialize your grid with GPU arrays. For example
 
 ```matlab
@@ -80,6 +80,13 @@ x = gpuArray.linspace(-xmax,xmax,N);
 grid = grid2d(x,x);
 ```
 Other solvers should support such initialization as well, but they do not benefit too much from GPU parallelization.
+
+---------------------
+If you are interested in adapting this code to your problem, or have any suggestions or feedback, contact me on 
+
+https://www.researchgate.net/profile/Yuriy-Bidasyuk/
+
+https://www.linkedin.com/in/yuriy-bidasyuk/
 
 ---------------------
 
