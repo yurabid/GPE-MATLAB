@@ -70,18 +70,12 @@ classdef GPPEtask < GPEtask
             res = real(obj.grid.inner(phi,obj.grid.lap(phi)));
         end        
 
-        function res = get_energy(obj,phi,time)
-            if(nargin<3)
-                time = obj.current_time;
-            end
-            if(nargin<2)
-                phi = obj.current_state;
-            end
+        function res = get_energy(obj,varargin)
             tmp2 = obj.Fi;
             obj.Fi= obj.Fi*0.5;
-            res = obj.get_energy@GPEtask(phi,time);
+            res = obj.get_energy@GPEtask(varargin{:});
             obj.Fi = tmp2;
-        end  
+        end
        
         function res=generate_pot(obj,phi)
             % generate monopole + quadrupole approximation

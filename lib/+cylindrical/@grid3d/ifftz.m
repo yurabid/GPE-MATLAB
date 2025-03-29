@@ -1,4 +1,4 @@
-function fun = ifftr( obj, ifun )
+function fun = ifftz( obj, ifun )
 %  FFT - Inverse fast Fourier transform on grid.
 %
 %  Usage for obj = grid3d :
@@ -8,4 +8,4 @@ function fun = ifftr( obj, ifun )
 %  Output
 %    fun    :  function values in real space
 
-fun = ifft(ifft(ifun, obj.nz, 3), obj.nr, 2);
+fun = ifft(ifun, obj.nz, 3);

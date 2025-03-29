@@ -24,6 +24,7 @@ classdef GPEtask < handle
         history            % history of current values
         user_callback      % user-defined callback function to process data after each step
         itp_max_iter=5000  % ITP maximum iterations
+        itp_min_iter=50    % ITP minimum iterations
         fftw_set_wisdom=true
         itp_adjust_stepsize=false
         % real time propagation properties
@@ -77,8 +78,10 @@ classdef GPEtask < handle
         end
 
         function res = applyh0(obj,phi,time)
-            if(nargin==2)
-                time = obj.current_time;
+            arguments
+                obj GPEtask
+                phi = obj.current_state
+                time = obj.current_time
             end
             res = obj.getVtotal(time).*phi;
             if(isscalar(obj.omega) && obj.omega ~= 0)
@@ -92,11 +95,10 @@ classdef GPEtask < handle
         end
 
         function res = get_energy(obj,phi,time)
-            if(nargin<3)
-                time = obj.current_time;
-            end
-            if(nargin<2)
-                phi = obj.current_state;
+            arguments
+                obj GPEtask
+                phi = obj.current_state
+                time = obj.current_time
             end
             tmp = obj.g;
             obj.g = 0.5*obj.g;
@@ -137,6 +139,28 @@ classdef GPEtask < handle
             ttime = toc;
             obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
             res = res_text;
+        end
+
+        function res = process_init_state(task, phi0)
+            if(isa(phi0,'char'))
+                if(task.Ntotal > 0)
+                    if(strcmp(phi0,'tf'))
+                        % Thomas-Fermi initial guess
+                        [res,~] = task.groundstate_tf(eps); 
+                    else
+                        % random initial guess
+                        res = sqrt(task.Ntotal)*task.grid.normalize(rand(task.grid.size,'like',task.grid.mesh.x) ...
+                            + 1i*rand(task.grid.size,'like',task.grid.mesh.x)); 
+                    end
+                else
+                    % use only Thomas-Fermi approximation as initial guess if mu_init is set
+                    res = real(sqrt(complex(task.mu_init - V)./task.g));
+                end
+            elseif(task.Ntotal > 0)
+                res = sqrt(task.Ntotal)*task.grid.normalize(phi0);
+            else
+                res = phi0;
+            end
         end
     end
 

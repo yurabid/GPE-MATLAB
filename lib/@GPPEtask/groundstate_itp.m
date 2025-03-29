@@ -1,33 +1,23 @@
 function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
-% groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
-%
-%  Usage :
-%    phi = task.groundstate_itp(dt,eps)
-%    phi = task.groundstate_itp(dt,eps,phi0)
-%    [phi, mu] = task.groundstate_itp(dt,eps)
-%    [phi, mu, mu2] = task.groundstate_itp(dt,eps)
-%  Input
-%    dt    :  evolution time step
-%    eps   :  desired accuracy (applied to chemical potential)
-%    phi0  :  initial approximation of the wave function,
-%             'tf' - Thomas-Fermi initial approximation,
-%             'rand' or empty - random
-%  Output
-%    phi      :  calculated stationary state
-%    mu       :  array of chemical potential values from norm decrease
-%    mu2      :  array of chemical potential from integral evaluation
+% groundstate_itp - Calculate the stationary state of GPE with split-step 
+% Imaginary Time Propagation method.
+arguments
+    task GPEtask
+    dt double      %  evolution time step
+    eps double     %  desired accuracy (applied to residual of the WF)
+    phi0 = 'rand'  %  initial approximation of the wave function,
+                   %  can be n-dim array of values or
+                   %  'rand' or empty - random
+end
+% Output argumants
+%  phi   :  calculated stationary state
+%  mu    :  (optional) history of chemical potential values from norm decrease
+%  mu2   :  (optional) history of chemical potential from integral evaluation
+%  E     :  (optional) history of energy values
 
 grid = task.grid;
-h=grid.x(2)-grid.x(1);
 sz = grid.nx+1;
-if(nargin <= 3)
-    phi0 = 'rand';
-end
-if(isa(phi0,'char'))
-    phi = sqrt(task.Ntotal)*grid.normalize(rand(size(grid.mesh.x),'like',grid.mesh.x) + 1i*rand(size(grid.mesh.x),'like',grid.mesh.x)); % random initial guess
-else
-    phi = sqrt(task.Ntotal)*grid.normalize(phi0);
-end
+phi = task.process_init_state(phi0);
 if(numel(task.Fi)==0)
     task.set_pot(phi);
 end
@@ -61,17 +51,17 @@ while true
             task.Fi = -grid.ifft(kk_inv.*grid.fft(task.nlinop));
         else
             task.set_pot_bc(task.nlinop);
-            [task.Fi,~] = task.V_cycle(task.Fi,task.nlinop,h,sz);
+            [task.Fi,~] = task.V_cycle(task.Fi,task.nlinop,grid.dx,sz);
         end
     end
     task.current_iter = i;
 
-    if(i>50 && mod(i,10) == 5)
+    if(i>task.itp_min_iter && mod(i,10) == 5)
         if(nargout >= 3)
             MU2(i) = real(grid.inner(phi,task.applyham(phi)));
         end
         if(nargout >= 4)
-            EE(i) = task.get_energy(phi)/task.Ntotal;
+            EE(i) = task.get_energy(phi);
         end        
 
         delta = max(abs(abs(phi(:))-abs(task.current_state(:))))/(dt*10);
@@ -98,15 +88,12 @@ task.current_mu = MU(i);
 task.current_n = task.Ntotal;
     
 if(nargout >= 2)
-    MU = MU(1:i);
-    varargout{1} = MU;
+    varargout{1} = MU(1:i);
 end
 if(nargout >= 3)
-    MU2 = MU2(1:i)/task.Ntotal;
-    varargout{2} = MU2;
+    varargout{2} = MU2(1:i)/task.Ntotal;
 end
 if(nargout >= 4)
-    EE = EE(1:i);
-    varargout{3} = EE;
+    varargout{3} = EE(1:i)/task.Ntotal;
 end
 end

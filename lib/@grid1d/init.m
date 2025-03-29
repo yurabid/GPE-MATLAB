@@ -1,7 +1,7 @@
 function  obj = init( obj, varargin )
 %  Initialize 1D grid.
 
-%%  set up real space grid from input
+%  set up real space grid from input
 if length( varargin ) == 1
   %  treat input as grid arrays
   x = (varargin{ 1 });
@@ -26,3 +26,5 @@ obj.kk = (obj.kx.^2)/2;
 %  save meshgrid structure
 obj.mesh = struct( 'x', x, 'y', 0, 'z', 0, 'x2', x, 'y2', 0 );
 obj.weight = obj.dx;
+obj.size = size(obj.mesh.x);
+end

@@ -13,7 +13,6 @@ function phi = solve_split(task,ddt,niter_inner,niter_outer)
 task.dispstat('','init');
 tic;
 grid = task.grid;
-% VV = task.getVtotal(0);
 g = task.g;
 if(task.Ntotal > 0)
     NN0 = task.Ntotal;

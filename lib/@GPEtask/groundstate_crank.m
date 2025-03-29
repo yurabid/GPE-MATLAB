@@ -1,78 +1,90 @@
 function [phi, varargout] = groundstate_crank(task,dt,eps,phi0)
-% groundstate_crank - Calculate the stationary state of GPE with Crank-Nicholson Imaginary Time Propagation method.
-%
-%  Usage :
-%    phi = task.groundstate_crank(dt,eps)
-%    phi = task.groundstate_crank(dt,eps,phi0)
-%    [phi, mu] = task.groundstate_crank(dt,eps)
-%    [phi, mu, mu2] = task.groundstate_crank(dt,eps)
-%  Input
-%    dt    :  evolution time step
-%    eps   :  desired accuracy (applied to chemical potential)
-%    phi0  :  initial approximation of the wave function
-%  Output
-%    phi      :  calculated stationary state
-%    mu       :  array of chemical potential values from norm decrease
-%    mu2      :  array of chemical potential from integral evaluation
+% groundstate_crank - Calculate the stationary state of GPE with 
+% Crank-Nicholson Imaginary Time Propagation method.
+arguments
+    task GPEtask
+    dt double      %  evolution time step
+    eps double     %  desired accuracy (applied to residual of the WF)
+    phi0 = 'rand'  %  initial approximation of the wave function,
+                   %  can be n-dim array of values or
+                   %  'tf' - Thomas-Fermi initial approximation,
+                   %  'rand' or empty - random
+end
+% Output argumants
+%  phi   :  calculated stationary state
+%  mu    :  (optional) history of chemical potential values from norm decrease
+%  mu2   :  (optional) history of chemical potential from integral evaluation
+%  E     :  (optional) history of energy values
 
 grid = task.grid;
-V = task.getVtotal(0);
-task.V0 = V;
-g = task.g*task.Ntotal;
-omega = task.omega;
-n_cn=task.n_crank;
-if(nargin <= 3)
-    phi = grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V));
-else
-    phi = grid.normalize(phi0);
-end
 
-MU = zeros(1000,1,'like',V);
-MU2 = zeros(1000,1,'like',V);
-delta = 1;
-mu_old = 0;
+phi = task.process_init_state(phi0);
+task.current_state = phi;
+
+MU = zeros(task.itp_max_iter,1,'like',grid.mesh.x);
+MU2 = zeros(task.itp_max_iter,1,'like',grid.mesh.x);
+EE = zeros(task.itp_max_iter,1,'like',grid.mesh.x);
 i = 1;
-tmp2 = real(phi.*conj(phi));
-while delta > eps && i<task.itp_max_iter
-
+while true
+    i=i+1;
     lphi = phi;
-    for ii = 1:n_cn
-        lphi = phi - dt*(task.applyh0(lphi,0) + g*tmp2.*lphi);
+    for ii = 1:task.n_crank
+        lphi = phi - dt*task.applyham(lphi,0);
         lphi = 0.5*(phi+lphi);
     end
-    phi = phi - dt*(task.applyh0(lphi,0) + g*tmp2.*lphi);
+    phi = phi - dt*task.applyham(lphi,0);
 
-    
-	tmp2 = real(phi.*conj(phi));
-    mu = sqrt(1.0/grid.integrate(tmp2));
+    mu = sqrt(task.Ntotal/grid.integrate(real(phi.*conj(phi))));
     phi=phi*mu;
-	tmp2 = tmp2*mu^2;
-    MU(i) = mu;
-    if(nargout >= 3)
-        MU2(i) = real(grid.integrate(conj(phi).*grid.lap(phi) + (V+g*tmp2).*tmp2));
-        if(omega ~= 0)
-            MU2(i) = MU2(i) - omega*real(grid.integrate(conj(phi).*grid.lz(phi)));
+    MU(i) = log(mu)/dt;
+
+    if(i>task.itp_min_iter && mod(i,10) == 0)
+        if(nargout >= 3)
+            MU2(i) = real(grid.inner(phi,task.applyham(phi)));
+        end        
+        if(nargout >= 4)
+            EE(i) = task.get_energy(phi);
+        end  
+        delta = max(abs(abs(phi(:))-abs(task.current_state(:))))/(dt*10);
+        task.current_state = phi;
+        if(delta < eps)
+            break;
         end
     end
-    if(i>50)
-        delta = abs(log(mu_old/mu))/dt^2/10;
-        mu_old = MU(i-10);
+    
+    if(i>=task.itp_max_iter)
+        warning('Convergence not reached');
+        break;
     end
-    i=i+1;
 
 end
 
 if(nargout >= 2)
-    MU = MU(1:nnz(MU));
-    MU = 1/dt * log(MU);
+    MU = MU(1:i);
+    if(task.Ntotal > 0)
+        task.current_mu = MU(end);
+        task.current_n = task.Ntotal;
+    end
     varargout{1} = MU;
 end
 if(nargout >= 3)
-    MU2 = MU2(1:nnz(MU2));
+    if(task.Ntotal > 0)
+        MU2 = MU2(1:i)/task.Ntotal;
+    else
+        MU2 = MU2(1:i)./MU;
+        task.current_mu = MU2(end);
+        task.current_n = MU(end);
+    end
     varargout{2} = MU2;
 end
-phi = phi * sqrt(task.Ntotal);
+if(nargout >= 4)
+    if(task.Ntotal > 0)
+        EE = EE(1:i)./task.Ntotal;
+    else
+        EE = EE(1:i)./MU;
+    end
+    varargout{3} = EE;
+end
+
 task.init_state = phi;
-task.current_mu = MU(end);
-task.current_n = task.Ntotal;
 end

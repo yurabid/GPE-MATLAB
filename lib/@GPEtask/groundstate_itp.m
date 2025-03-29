@@ -1,21 +1,20 @@
 function [phi, varargout] = groundstate_itp(task,dt,eps,phi0)
-% groundstate_itp - Calculate the stationary state of GPE with split step Imaginary Time Propagation method.
-%
-%  Usage :
-%    phi = task.groundstate_itp(dt,eps)
-%    phi = task.groundstate_itp(dt,eps,phi0)
-%    [phi, mu] = task.groundstate_itp(dt,eps)
-%    [phi, mu, mu2] = task.groundstate_itp(dt,eps)
-%  Input
-%    dt    :  evolution time step
-%    eps   :  desired accuracy (applied to chemical potential)
-%    phi0  :  initial approximation of the wave function,
-%             'tf' - Thomas-Fermi initial approximation,
-%             'rand' or empty - random
-%  Output
-%    phi      :  calculated stationary state
-%    mu       :  array of chemical potential values from norm decrease
-%    mu2      :  array of chemical potential from integral evaluation
+% groundstate_itp - Calculate the stationary state of GPE with split-step 
+% Imaginary Time Propagation method.
+arguments
+    task GPEtask
+    dt double      %  evolution time step
+    eps double     %  desired accuracy (applied to residual of the WF)
+    phi0 = 'rand'  %  initial approximation of the wave function,
+                   %  can be n-dim array of values or
+                   %  'tf' - Thomas-Fermi initial approximation,
+                   %  'rand' or empty - random
+end
+% Output argumants
+%  phi   :  calculated stationary state
+%  mu    :  (optional) history of chemical potential values from norm decrease
+%  mu2   :  (optional) history of chemical potential from integral evaluation
+%  E     :  (optional) history of energy values
 
 grid = task.grid;
 V = task.getVtotal(0);
@@ -24,25 +23,8 @@ if(task.Ntotal > 0)
 else
     nnn = 1;
 end
-if(nargin <= 3)
-    phi0 = 'rand';
-end
-if(isa(phi0,'char'))
-    if(task.Ntotal > 0)
-        if(strcmp(phi0,'tf'))
-            % Thomas-Fermi initial guess
-            [phi,~] = task.groundstate_tf(eps); 
-        else
-            % random initial guess
-            phi = sqrt(nnn)*grid.normalize(rand(size(V),'like',V) + 1i*rand(size(V),'like',V)); 
-        end
-    else
-        % use only Thomas-Fermi approximation as initial guess if mu_init is set
-        phi = real(sqrt(complex(task.mu_init - V)./task.g));
-    end
-else
-    phi = sqrt(nnn)*grid.normalize(phi0);
-end
+
+phi = task.process_init_state(phi0);
 task.current_state = phi;
 
 task.set_kinop(dt);
@@ -50,7 +32,7 @@ MU = zeros(task.itp_max_iter,1,'like',V);
 MU2 = zeros(task.itp_max_iter,1,'like',V);
 EE = zeros(task.itp_max_iter,1,'like',V);
 i = 0;
-dtmin = 0;
+dtmin = sqrt(eps);
 task.nlinop = exp(-dt*0.5*(abs(phi).^2.*task.g+V));
 while true
     i=i+1;
@@ -69,23 +51,18 @@ while true
     end
     phi=phi*mu;
 
-    if(i>50 && mod(i,10) == 0)
+    if(i>task.itp_min_iter && mod(i,10) == 0)
         if(nargout >= 3)
             MU2(i) = real(grid.inner(phi,task.applyham(phi)));
         end
         if(nargout >= 4)
             EE(i) = task.get_energy(phi);
         end
-        % delta = (abs(MU(i)-MU(i-9))/9 + abs(MU(i)-MU(i-1)))/dt;
         delta = max(abs(abs(phi(:))-abs(task.current_state(:))))/(dt*10);
         task.current_state = phi;
         if(delta < eps)
-            if(dtmin == 0)
-                if(nargout >= 3)
-                    dtmin = dt*sqrt(eps/abs(MU(i)-MU2(i)/nnn));
-                else
-                    dtmin = sqrt(eps);
-                end
+            if(nargout >= 3)
+                dtmin = dt*sqrt(eps/abs(MU(i)-MU2(i)/nnn));
             end
             if (~task.itp_adjust_stepsize || dt<dtmin)
                 break;

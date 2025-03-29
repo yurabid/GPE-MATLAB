@@ -15,8 +15,6 @@ function phi = solve_split(task,ddt,niter_inner,niter_outer)
 task.dispstat('','init');
 tic;
 grid = task.grid;
-g = task.g;
-h=grid.x(2)-grid.x(1);
 sz = grid.nx+1;
 qms = zeros(9,5,'like',grid.x);
 start = task.current_iter;
@@ -42,15 +40,15 @@ for j=start+1:niter_outer
     time=(j-1)*dt_outer;
     for jj=1:niter_inner
         time2=time+(jj-1)*ddt;
-        task.nlinop = exp(-0.5*dt*(g.*tmp+task.getVtotal(time2)-mu));
+        task.nlinop = exp(-0.5*dt*(task.g.*tmp+task.getVtotal(time2)-mu));
         phi1 = task.nlinop.*phi;
         phi1 = task.ssft_kin_step(phi1,dt);
         phi1 = task.nlinop.*phi1;
 
         tmp=(tmp+real(phi1.*conj(phi1)))/2;
-        [task.Fi,~]=task.V_cycle(task.Fi,tmp,h,sz); 
+        [task.Fi,~]=task.V_cycle(task.Fi,tmp,grid.dx,sz); 
         
-        task.nlinop = exp(-0.5*dt*(g.*tmp+task.getVtotal(time2)-mu));
+        task.nlinop = exp(-0.5*dt*(task.g.*tmp+task.getVtotal(time2)-mu));
         phi = task.nlinop.*phi;
         phi = task.ssft_kin_step(phi,dt);
         phi = task.nlinop.*phi;
