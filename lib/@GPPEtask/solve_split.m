@@ -26,7 +26,7 @@ else
     phi = task.init_state;
 end
 if(numel(task.Fi)==0)
-    task.set_pot(phi,true);
+    task.set_pot(abs(phi).^2,true);
 end
 tmp = real(phi.*conj(phi));
 muc = real(grid.inner(phi,task.applyham(phi)))./grid.integrate(tmp);

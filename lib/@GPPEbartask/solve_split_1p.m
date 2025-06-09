@@ -1,4 +1,4 @@
-function phi = solve_split(task,ddt,niter_inner,niter_outer)
+function phi = solve_split_1p(task,ddt,niter_inner,niter_outer)
 % Calculate the dynamics of GPE-Poisson system 
 % using split-step Fourier method. The gravitational potential is
 % recalculated at each time step with a multigrid V-cycle
@@ -20,17 +20,16 @@ qms = zeros(9,5,'like',grid.x);
 start = task.current_iter;
 dt = ddt*1i/(1+1i*task.gamma);
 task.set_kinop(dt);
-m0 = task.bar_mass/task.bar_np;
-
+task.set_bar_mass_amp();
+% task.set_pot_bar_an(task.bar_coords);
 if(start>0)
     phi = task.current_state;
 else
     phi = task.init_state;
 end
-
-task.bar_dens=task.particle_cloud_density()/grid.weight*m0;
-task.set_pot(abs(phi).^2+task.bar_dens,true);
-
+if(numel(task.Fi)==0)
+    task.set_pot(phi,true);
+end
 tmp = real(phi.*conj(phi));
 muc = real(grid.inner(phi,task.applyham(phi)))./grid.integrate(tmp);
 if(task.mu_init > 0)
@@ -50,16 +49,18 @@ for j=start+1:niter_outer
             phi1 = task.ssft_kin_step(phi1,dt);
             phi1 = task.nlinop.*phi1;
             tmp=(tmp+real(phi1.*conj(phi1)))/2;
+            [task.Fi,~]=task.V_cycle(task.Fi,tmp+task.bar_dens,grid.dx,sz); 
         end
 
         if task.solve_bar_dynamic
-            % task.bar_dens=task.particle_cloud_density()/grid.weight*m0;
-            [task.Fi,~]=task.V_cycle(task.Fi,tmp+task.bar_dens,grid.dx,sz);
-            [Fx,Fy,Fz] = task.grad_interp(task.getVtotal(time2),task.bar_coords);
-            task.bar_vels = task.bar_vels - [Fx,Fy,Fz]*ddt;
+            [Fx,Fy,Fz] = gradient(task.Fi);
+            task.generate_bar_dens(task.bar_coords+task.bar_vels*ddt/2);
+            Fx = -grid.integrate(task.bar_dens.*Fx(task.grid_inds,task.grid_inds,task.grid_inds)/grid.dx)/task.bar_mass;
+            Fy = -grid.integrate(task.bar_dens.*Fy(task.grid_inds,task.grid_inds,task.grid_inds)/grid.dx)/task.bar_mass;
+            Fz = -grid.integrate(task.bar_dens.*Fz(task.grid_inds,task.grid_inds,task.grid_inds)/grid.dx)/task.bar_mass;
+            task.bar_vels = task.bar_vels + [Fx,Fy,Fz]*ddt;
             task.bar_coords = task.bar_coords + task.bar_vels*ddt;
-        else
-            [task.Fi,~]=task.V_cycle(task.Fi,tmp+task.bar_dens,grid.dx,sz);
+            task.set_pot_bar_an(task.bar_coords+task.bar_vels*ddt/2);
         end
 
         if task.solve_bec_dynamic
@@ -68,11 +69,9 @@ for j=start+1:niter_outer
             phi = task.ssft_kin_step(phi,dt);
             phi = task.nlinop.*phi;
             tmp = real(phi.*conj(phi));
+            task.set_pot_bc(tmp+task.bar_dens);
+            % [task.Fi,~]=task.V_cycle(task.Fi,tmp,h,sz);
         end
-
-        task.bar_dens=task.particle_cloud_density()/grid.weight*m0;
-        task.set_pot_bc(tmp+task.bar_dens);
-        % [task.Fi,~]=task.V_cycle(task.Fi,tmp+task.bar_dens,grid.dx,sz);
 
         if(task.calculate_qmder)
             qms = [qms(:,2:5),task.current_qm(:)];

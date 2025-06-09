@@ -1,86 +1,106 @@
-classdef GPPEbartask < GPEtask
-    % GPPEtask - Solution of the Gross-Pitaevsii-Poisson system of equations
+classdef GPPEbartask < GPPEtask
+    % GPPEbartask - Solution of the Gross-Pitaevsii-Poisson system of
+    % equations + self-consistent particle-mesh calculation of the gas 
+    % of classical particles gravitationally interacting with the condensate.  
     % works only with 3D grids with equal dimensions
     
     properties
-        alpha=0
-        nl_amp=1
-        Fi
-        ext_kernel
-        laps={}
-        trans={}
-        sizes={}
-        bcind
-        current_qm
-        current_qmder
-        current_rcm
-        bar_dens
-        bar_Fi
-        bar_coords
-        bar_vels
-        bar_pot
-        bar_amp
-        bar_rad
+        bar_coords = [0,0,0]
+        bar_vels = [0,0,0]
+        bar_dens = 0
+        bar_Fi = 0
+        bar_mass = 0
+        bar_np = 1
+        bar_amp = 0
+        bar_rad = 0
+        solve_bec_dynamic=true
+        solve_bar_dynamic=true
     end
     
     methods
         function obj = GPPEbartask(grid,trappot)
-            obj = obj@GPEtask(grid,trappot);
-            obj.ext_kernel = zeros(3,3,'like',grid.x);
-            obj.ext_kernel(:,:,1) = [1 2 1;2 4 2;1 2 1]/8;
-            obj.ext_kernel(:,:,2) = [2 4 2;4 8 4;2 4 2]/8;
-            obj.ext_kernel(:,:,3) = [1 2 1;2 4 2;1 2 1]/8;  
-            obj.bcind=zeros(size(grid.mesh.x)+1);
-            obj.bcind(1,:,:)=1;obj.bcind(end,:,:)=1;
-            obj.bcind(:,1,:)=1;obj.bcind(:,end,:)=1;
-            obj.bcind(:,:,1)=1;obj.bcind(:,:,end)=1;
-            obj.bcind=obj.bcind(:)>0;  
+            obj = obj@GPPEtask(grid,trappot);
             obj.bar_dens=zeros(size(grid.mesh.x),'like',grid.mesh.x);
-            obj.bar_coords=[0,0,0];
-            obj.bar_vels=[0,0,0];
-        end
-        
-        function res = applyham(obj,phi,time)
-            if(nargin==2)
-                time = obj.current_time;
-            end
-            nx=obj.grid.nx;
-            res = (obj.getVtotal(time)+obj.Fi(1:nx,1:nx,1:nx)+...
-                obj.bar_Fi(1:nx,1:nx,1:nx)).*phi + obj.g.*abs(phi).^2.*phi;
-            res = res + obj.grid.lap(phi);
         end
 
-        function res = applyh0(obj,phi,time)
-            if(nargin==2)
-                time = obj.current_time;
+        function generate_particles_disc(obj, np, rmax, zmax)
+            obj.bar_np = np;
+            rs = (rand(np,1)).^(0.55)*rmax;
+            zs = rand(np,1)*2*zmax-zmax;
+            phis = rand(np,1)*2*pi;
+
+            obj.bar_coords = [rs.*cos(phis), rs.*sin(phis), zs];
+            obj.bar_vels = zeros(np,3);
+            obj.bar_dens=obj.particle_cloud_density()/obj.grid.weight*obj.bar_mass/obj.bar_np;
+            rgrid = (0:99)*rmax/100;
+            vgrid = rgrid*0;
+            rr=sqrt(obj.grid.mesh.x.^2 + obj.grid.mesh.y.^2);
+            for i=1:100
+                mcur = obj.grid.integrate(obj.current_state(rr<rgrid(i))+obj.bar_dens(rr<rgrid(i)));
+                vgrid(i) = real(sqrt(mcur/4/pi/rgrid(i)));
             end
-            nx=obj.grid.nx;
-            res = (obj.getVtotal(time)+obj.Fi(1:nx,1:nx,1:nx)+...
-                obj.bar_Fi(1:nx,1:nx,1:nx)).*phi;
-            res = res + obj.grid.lap(phi);
+            obj.bar_vels = (interp1(rgrid,vgrid,rs)).*[-sin(phis)- rand(np,1)*0.4 + 0.2,...
+                cos(phis)- rand(np,1)*0.4 + 0.2, rand(np,1)*0.4 - 0.2];
+            % obj.bar_vels = (2+2*rand(np,1)).*[-sin(phis), cos(phis), zeros(np,1)];
+            % obj.bar_vels = (sqrt(obj.Ntotal/4/pi + obj.bar_mass/8/pi) + rand(np,1)*0.4-0.2).*[-sin(phis), cos(phis), zeros(np,1)].*rs./(rs.^1.5+2);
         end
-        function res = get_kin_energy(obj,phi)
-            res = real(obj.grid.inner(phi,obj.grid.lap(phi)));
-        end        
-        function res = get_energy(obj,phi,time)
-            if(nargin<3)
-                time = obj.current_time;
+
+        function density = bin_particles1d(task, pos, weights)
+            if nargin < 3
+                weights = ones(size(pos));
             end
-            if(nargin<2)
-                phi = obj.current_state;
+            indices_low = floor(pos);
+            delta = pos - indices_low;
+            x0 = indices_low(:) + 1;
+            M = max(indices_low) + 2;
+            density = accumarray([x0; x0 + 1], [(1 - delta(:)).*weights(:); delta(:).*weights(:)], [M, 1]);
+        end
+
+        function [rdist, rgrid] = bar_density_vs_radius(task)
+            rstep = task.grid.dx;
+            rvals = sqrt(task.bar_coords(:,1).^2+task.bar_coords(:,2).^2+task.bar_coords(:,3).^2);
+            rdist = task.bin_particles1d(rvals./rstep)/task.bar_np*task.bar_mass/rstep;
+            rgrid = (0:numel(rdist)-1)*rstep;
+        end
+
+        function [vel_avg, sigma, rgrid] = bar_velocity_vs_radius(task)
+            rstep = task.grid.dx;
+            pind = sqrt(task.bar_coords(:,1).^2+task.bar_coords(:,2).^2+task.bar_coords(:,3).^2)./rstep;
+            indices_low = floor(pind);
+            M = max(indices_low) + 1;
+            % n_per_bin = groupcounts(indices_low);
+            velocity = sqrt(task.bar_vels(:,1).^2+task.bar_vels(:,2).^2+task.bar_vels(:,3).^2);
+            % vel_avg = accumarray(indices_low+1,velocity, [M, 1])./n_per_bin;
+            rgrid = (0:M-1)*rstep;
+            vel_avg = zeros(M,1);
+            sigma = zeros(M,1);
+            for i=1:M
+                vel_in_bin = velocity(indices_low==i-1);
+                n_per_bin = numel(vel_in_bin);
+                if n_per_bin > 0
+                    vel_avg(i) = sum(vel_in_bin)/n_per_bin;
+                    sigma(i) = sqrt(sum((vel_in_bin-vel_avg(i)).^2)/n_per_bin)*sqrt(3);
+                end
             end
-            tmp = obj.g;
+        end
+
+        function res = get_energy(obj,varargin)
             tmp2 = obj.Fi;
-            obj.g = 0.5*obj.g;
-            obj.Fi= obj.Fi*0.5;
-            res = real(obj.grid.inner(phi,obj.applyham(phi,time)));
-            obj.g=tmp;
+            obj.Fi= obj.Fi(obj.grid_inds,obj.grid_inds,obj.grid_inds)*0.5+obj.bar_Fi*0.5;
+            if obj.bar_mass > 0
+                m0 = obj.bar_mass/obj.bar_np;
+                res = obj.get_energy@GPEtask(varargin{:});
+                res = res + obj.grid.integrate(obj.Fi.*obj.bar_dens);
+                res = res + sum(obj.bar_vels(:).^2)/2*m0;
+            end
             obj.Fi = tmp2;
-        end  
+        end
+        
         function bdens = bar_fun(obj,bc)
             bdens = obj.bar_amp*exp(-((obj.grid.mesh.x-bc(1)).^2+...
                 (obj.grid.mesh.y-bc(2)).^2+(obj.grid.mesh.z-bc(3)).^2)/obj.bar_rad^2);
         end
+        
         function res=generate_bar_dens(obj,bc)
             if(nargin<2)
                 bc=obj.bar_coords;
@@ -92,202 +112,21 @@ classdef GPPEbartask < GPEtask
             end
             obj.bar_dens=res;
         end
-        function res=generate_pot(obj,dens,save)
-%             phi = sqrt(obj.Ntotal)*obj.grid.normalize(phi);
-%             bdens = obj.generate_bar_dens();
-%             dens = abs(phi).^2+bdens;
-            Mtot = obj.grid.integrate(dens);
-            rcm = obj.cm_coords(dens,Mtot);
-            if(save)
-                obj.current_rcm=rcm;
-            end
-            xg=[obj.grid.x, obj.grid.x(end)+obj.grid.x(2)-obj.grid.x(1)];
-            [X,Y,Z]=meshgrid(xg-rcm(1),xg-rcm(2),xg-rcm(3));
-            rr = sqrt(X.^2+Y.^2+Z.^2);
-            res=(-Mtot/(4*pi)./rr);
- 
-            Q = obj.quad_mom(dens,rcm);
-            if(save)
-                obj.current_qm=Q;
-            end
-            res = res - Q(1,1)/(8*pi)./rr.^5.*X.^2;
-            res = res - Q(2,2)/(8*pi)./rr.^5.*Y.^2;
-            res = res - Q(3,3)/(8*pi)./rr.^5.*Z.^2;
-            res = res - Q(1,2)/(4*pi)./rr.^5.*X.*Y;
-            res = res - Q(1,3)/(4*pi)./rr.^5.*X.*Z;
-            res = res - Q(2,3)/(4*pi)./rr.^5.*Y.*Z;
-        end
-        function set_pot(obj,phi,refine)
-            dens = abs(phi).^2;
-            obj.Fi=obj.generate_pot(dens,true);
-            if (nargin==3 && refine)
-                h=obj.grid.x(2)-obj.grid.x(1);
-                sz = size(obj.grid.mesh.x)+1;
-                for i=1:5
-                    [obj.Fi,~]=obj.V_cycle(obj.Fi,dens,h,sz(1));
-                end
-            end
-        end
-        function set_pot_bar(obj,bdens,refine)
-%             dens = abs(phi).^2;
-            obj.bar_Fi=obj.generate_pot(bdens,false);
-            if (nargin==3 && refine)
-                h=obj.grid.x(2)-obj.grid.x(1);
-                sz = size(obj.grid.mesh.x)+1;
-                for i=1:10
-                    [obj.bar_Fi,~]=obj.V_cycle(obj.bar_Fi,bdens,h,sz(1));
-                end
-            end
-        end 
+
         function set_pot_bar_an(obj,rcm)
             X = obj.grid.mesh.x-rcm(1);
             Y = obj.grid.mesh.y-rcm(2);
             Z = obj.grid.mesh.z-rcm(3);
             R = sqrt(X.^2+Y.^2+Z.^2);
-            obj.bar_Fi = -obj.bar_amp*pi^1.5*erf(R/obj.bar_rad)./R*obj.bar_rad^3/4/pi;
-        end          
-        function set_pot_bc(obj,phi)
-            tmp = obj.generate_pot(abs(phi).^2,true);
-            obj.Fi(obj.bcind) = tmp(obj.bcind);
-        end   
-        function set_pot_bc_bar(obj,bdens)
-            tmp = obj.generate_pot(bdens,false);
-            obj.bar_Fi(obj.bcind) = tmp(obj.bcind);
-        end 
-        function rcm = cm_coords(obj,dens,Mtot)
-            rcm=zeros(1,3,'like',dens);
-%             dens = abs(phi).^2+task.bar_dens;
-            rcm(1) = obj.grid.integrate(dens.*obj.grid.mesh.x)/Mtot;
-            rcm(2) = obj.grid.integrate(dens.*obj.grid.mesh.y)/Mtot;
-            rcm(3) = obj.grid.integrate(dens.*obj.grid.mesh.z)/Mtot;            
-            rcm=real(rcm);
-        end        
-        function Q = quad_mom(obj,dens,rcm)
-            Q=zeros(3,3,'like',dens);
-%             dens = abs(phi).^2+task.bar_dens;
-            X = (obj.grid.mesh.x-rcm(1));
-            Y = (obj.grid.mesh.y-rcm(2));
-            Z = (obj.grid.mesh.z-rcm(3));
-            rr = (X.^2+Y.^2+Z.^2);
-            Q(1,2) = obj.grid.integrate(dens.*(3*X.*Y));
-            Q(1,3) = obj.grid.integrate(dens.*(3*X.*Z));
-            Q(2,3) = obj.grid.integrate(dens.*(3*Z.*Y));
-            
-            Q(2,1) = Q(1,2); Q(3,1) = Q(1,3); Q(3,2) = Q(2,3);
-            
-            Q(1,1) = obj.grid.integrate(dens.*(3*X.^2-rr));
-            Q(2,2) = obj.grid.integrate(dens.*(3*Y.^2-rr));
-            Q(3,3) = obj.grid.integrate(dens.*(3*Z.^2-rr));
-            Q=real(Q);
-        end
-      
-        function [phi,r] = V_cycle(obj,phi,f,h,N,Nmin)
-            if nargin<6
-                Nmin=3;
-            end
-            [phi,r] = obj.jacobi(phi,f,h,N);
-            rhs = obj.restrict(r);
-            sz = size(rhs);
-            eps = zeros(sz,'like',rhs);
-            sz=sz(1);
-            if sz<=Nmin
-                [eps,~] = obj.jacobi(eps,rhs,2*h,sz);
-            else
-                [eps,~] = obj.V_cycle(eps,rhs,2*h,sz,Nmin);
-            end
-            phi = phi + obj.extend(eps);
-            [phi,r] = obj.jacobi(phi,f,h,N);
-        end    
-        
-        function [Fi,res]=jacobi(~,Fi,f,h,N)
-            Fi_new = Fi;
-            niter=3;% number of smoothing steps, 2 seems to be enough
-            for u=1:niter
-               Fi_new(2:N-1,2:N-1,2:N-1)=(...
-                   2*(  Fi(3:N,2:N-1,2:N-1) + Fi(1:N-2,2:N-1,2:N-1)...
-                      + Fi(2:N-1,3:N,2:N-1) + Fi(2:N-1,1:N-2,2:N-1)...
-                      + Fi(2:N-1,2:N-1,3:N) + Fi(2:N-1,2:N-1,1:N-2))...
-                   - 6*h^2*f(2:N-1,2:N-1,2:N-1)...
-                   + (Fi(3:N,3:N,2:N-1)    + Fi(1:N-2,3:N,2:N-1)...
-                   + Fi(3:N,1:N-2,2:N-1)  + Fi(1:N-2,1:N-2,2:N-1)...
-                   + Fi(2:N-1,3:N,3:N)    + Fi(2:N-1,1:N-2,3:N)...
-                   + Fi(2:N-1,3:N,1:N-2)  + Fi(2:N-1,1:N-2,1:N-2)...
-                   + Fi(3:N,2:N-1,3:N)    + Fi(3:N,2:N-1,1:N-2)...
-                   + Fi(1:N-2,2:N-1,3:N)  + Fi(1:N-2,2:N-1,1:N-2))...                  
-                   )/24; 
-               if(u<niter)
-                    Fi=Fi_new;
-               end
-            end
-            res = (Fi-Fi_new)/(h^2/4);
-        end    
-
-        function [Fi,res]=jacobi2(~,Fi,f,h,N)
-            Fi_new = Fi;
-            niter=3;% number of smoothing steps, 2 seems to be enough
-            for u=1:niter
-               Fi_new(2:N-1,2:N-1,2:N-1)=(...
-                   6*(  Fi(3:N,2:N-1,2:N-1) + Fi(1:N-2,2:N-1,2:N-1)...
-                      + Fi(2:N-1,3:N,2:N-1) + Fi(2:N-1,1:N-2,2:N-1)...
-                      + Fi(2:N-1,2:N-1,3:N) + Fi(2:N-1,2:N-1,1:N-2))...
-                   - 26*h^2*f(2:N-1,2:N-1,2:N-1)...
-                   + 3*(Fi(3:N,3:N,2:N-1)    + Fi(1:N-2,3:N,2:N-1)...
-                   + Fi(3:N,1:N-2,2:N-1)  + Fi(1:N-2,1:N-2,2:N-1)...
-                   + Fi(2:N-1,3:N,3:N)    + Fi(2:N-1,1:N-2,3:N)...
-                   + Fi(2:N-1,3:N,1:N-2)  + Fi(2:N-1,1:N-2,1:N-2)...
-                   + Fi(3:N,2:N-1,3:N)    + Fi(3:N,2:N-1,1:N-2)...
-                   + Fi(1:N-2,2:N-1,3:N)  + Fi(1:N-2,2:N-1,1:N-2))...
-                   + 2*(Fi(3:N,3:N,3:N)    + Fi(1:N-2,3:N,3:N)...
-                   + Fi(3:N,3:N,1:N-2)  + Fi(1:N-2,3:N,1:N-2)...
-                   + Fi(3:N,1:N-2,3:N)    + Fi(1:N-2,1:N-2,3:N)...
-                   + Fi(3:N,1:N-2,1:N-2)  + Fi(1:N-2,1:N-2,1:N-2))...                   
-                   )/88;
-                
-               if(u<niter)
-                    Fi=Fi_new;
-               end
-            end
-            res = (Fi-Fi_new)/(h^2/88*26);
-        end          
-        
-        function phi=restrict(~,phi)
-            phi=phi(1:2:end,1:2:end,1:2:end);
-        end
-
-        function res=extend(obj,phi)
-            res = zeros(size(phi)*2-1,'like',phi); 
-            res(1:2:end,1:2:end,1:2:end) = phi;
-            res = convn(res,obj.ext_kernel,'same');
+            obj.bar_Fi = -obj.bar_mass/4/pi*erf(R/obj.bar_rad)./R;
         end  
-    end
-  
-  methods (Access = protected)         
-        function res=ext_callback(obj,phi,step,time,mu,n)
-            if(exist('snapshots','file') ~= 7)
-                mkdir('snapshots');
-            end
-            obj.current_state = phi;
-            obj.current_time = time;
-            obj.current_iter = step;
-            obj.current_mu = mu;
-            obj.history.mu(step) = mu;
-            obj.current_n = n;
-            obj.history.n(step) = n;
-            res_text='';
 
-            if(isa(obj.user_callback,'function_handle'))
-                if(nargout(obj.user_callback) ~= 0)
-                    res_text=obj.user_callback(obj);
-                else
-                    res_text='';
-                    obj.user_callback(obj);
-                end
+        function set_bar_mass_amp(obj)
+            if obj.bar_amp ~= 0 && obj.bar_mass == 0
+                obj.bar_mass = obj.bar_amp*pi^1.5*obj.bar_rad^3;
+            elseif obj.bar_amp == 0 && obj.bar_mass ~= 0
+                obj.bar_amp = obj.bar_mass/(pi^1.5*obj.bar_rad^3);
             end
-            ttime = toc;
-            obj.dispstat(sprintf(['Split-step: iter - %u, mu - %0.3f, calc. time - %0.3f sec.; ',res_text],step,mu,ttime));
-            res = res_text;
-        end
+        end      
     end
-    
 end
-

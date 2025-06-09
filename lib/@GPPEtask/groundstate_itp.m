@@ -19,7 +19,7 @@ grid = task.grid;
 sz = grid.nx+1;
 phi = task.process_init_state(phi0);
 if(numel(task.Fi)==0)
-    task.set_pot(phi);
+    task.set_pot(abs(phi).^2);
 end
 task.current_state = phi;
 if(task.itp_use_fft_Fi)

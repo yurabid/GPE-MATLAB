@@ -68,7 +68,11 @@ classdef GPPEtask < GPEtask
 
         function res = get_kin_energy(obj,phi)
             res = real(obj.grid.inner(phi,obj.grid.lap(phi)));
-        end        
+        end     
+
+        function res = QuantumPressure(obj,phi)
+            res = conj(phi).*obj.grid.lap(phi)*2;
+        end    
 
         function res = get_energy(obj,varargin)
             tmp2 = obj.Fi;
@@ -77,10 +81,10 @@ classdef GPPEtask < GPEtask
             obj.Fi = tmp2;
         end
        
-        function res=generate_pot(obj,phi)
+        function res=generate_pot(obj,dens)
             % generate monopole + quadrupole approximation
             % for gravitational potential
-            dens = abs(phi).^2;
+            % dens = abs(phi).^2;
             Mtot = obj.grid.integrate(dens);
             xg=[obj.grid.x, obj.grid.x(end)+obj.grid.x(2)-obj.grid.x(1)];
             [X,Y,Z]=meshgrid(xg,xg,xg);
@@ -108,14 +112,14 @@ classdef GPPEtask < GPEtask
                 res = res - Q(2,3)/(4*pi)./rr.^5.*Y.*Z;
             end
         end
-        function set_pot(obj,phi,refine) 
+        function set_pot(obj,dens,refine) 
             % Set gravitational potential based on arbitrary WF
-            obj.Fi=obj.generate_pot(phi);
+            obj.Fi=obj.generate_pot(dens);
             if (nargin==3 && refine)
                 h=obj.grid.x(2)-obj.grid.x(1);
                 sz = size(obj.grid.mesh.x)+1;
                 for i=1:10
-                    [obj.Fi,~]=obj.V_cycle(obj.Fi,abs(phi).^2,h,sz(1));
+                    [obj.Fi,~]=obj.V_cycle(obj.Fi,dens,h,sz(1));
                 end
             end
         end        

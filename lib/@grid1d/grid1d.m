@@ -13,7 +13,7 @@ classdef grid1d < handle
     mesh        %  meshgrid coordinates
     ndims       %  number of dimensions
     size        %  array of grid sizes in each dimension
-    stencil1=[1,-8,0,8,-1]/12
+    stencil1=[-1,8,0,-8,1]/12
     stencil2=[-1,16,-30,16,-1]/12
   end
   
@@ -58,7 +58,7 @@ classdef grid1d < handle
     function df = deriv2(obj, A, dim, h)
         kernelSize = ones(1, ndims(A));
         kernelSize(dim) = 5;
-        shapedKernel = reshape(obj.stencil2, kernelSize)/h;
+        shapedKernel = reshape(obj.stencil2, kernelSize)/h^2;
         df = convn(A, shapedKernel, 'same');
     end
 
